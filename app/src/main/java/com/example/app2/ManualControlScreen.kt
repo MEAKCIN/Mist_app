@@ -4,6 +4,7 @@ package com.example.app2
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,7 +17,8 @@ fun ManualControlScreen(
     deviceOn: Boolean,
     currentEmotion: String,
     onEmotionChange: (String) -> Unit,
-    showDisabledMessage: () -> Unit
+    showDisabledMessage: () -> Unit,
+    onUpdateDevice: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
@@ -42,6 +44,9 @@ fun ManualControlScreen(
                     enabled = deviceOn
                 )
             }
+        }
+        Button(onClick = onUpdateDevice) {
+            Text(text = "Cihazı Güncelle")
         }
     }
 }

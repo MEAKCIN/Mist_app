@@ -1,8 +1,4 @@
-
 package com.example.app2
-import com.example.app2.HomeScreen
-import com.example.app2.ImageControlScreen
-import com.example.app2.ManualControlScreen
 
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -32,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.example.app2.ui.theme.App2Theme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 sealed class Screen(val title: String) {
@@ -90,7 +87,7 @@ fun MainScreen() {
                             when (screen) {
                                 Screen.Home -> {
                                     Icon(
-                                        imageVector = Icons.Filled.Home,
+                                        painter = painterResource(id = R.drawable.manual_control_icon),
                                         contentDescription = screen.title
                                     )
                                 }
@@ -125,16 +122,50 @@ fun MainScreen() {
                         sprayDuration = sprayDuration,
                         onSwitchChange = { deviceOn = it },
                         onPeriodChange = { sprayPeriod = it },
-                        onDurationChange = { sprayDuration = it }
+                        onDurationChange = { sprayDuration = it },
+                        onUpdateDevice = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    NetworkManager.updateDeviceRequest(
+                                        sprayPeriod,
+                                        sprayDuration,
+                                        deviceOn,
+                                        currentEmotion
+                                    ) { _, _ -> }
+                                } catch (e: Exception) {
+                                    println(e)
+                                }
+                            }
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Device updated")
+                            }
+                        }
                     )
                 }
                 Screen.Manual -> {
                     ManualControlScreen(
                         deviceOn = deviceOn,
                         currentEmotion = currentEmotion,
-                        onEmotionChange = { newEmotion -> currentEmotion = newEmotion },
+                        onEmotionChange = { currentEmotion = it },
                         showDisabledMessage = {
                             scope.launch { snackbarHostState.showSnackbar("Turn on the device first") }
+                        },
+                        onUpdateDevice = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    NetworkManager.updateDeviceRequest(
+                                        sprayPeriod,
+                                        sprayDuration,
+                                        deviceOn,
+                                        currentEmotion
+                                    ) { _, _ -> }
+                                } catch (e: Exception) {
+                                    println(e)
+                                }
+                            }
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Device updated")
+                            }
                         }
                     )
                 }
@@ -142,7 +173,26 @@ fun MainScreen() {
                     ImageControlScreen(
                         photoBitmap = photoBitmap,
                         onTakePhoto = { photoLauncher.launch(null) },
-                        onUploadPhoto = { uploadLauncher.launch("image/*") }
+                        onUploadPhoto = { uploadLauncher.launch("image/*") },
+                        onSendPhoto = {
+                            photoBitmap?.let { bitmap ->
+                                scope.launch(Dispatchers.IO) {
+                                    NetworkManager.sendPhotoRequest(bitmap) { success, response ->
+                                        scope.launch {
+                                            if (success) {
+                                                snackbarHostState.showSnackbar("Photo sent successfully")
+                                            } else {
+                                                snackbarHostState.showSnackbar("Photo sending failed: $response")
+                                            }
+                                        }
+                                    }
+                                }
+                            } ?: run {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("No photo available")
+                                }
+                            }
+                        }
                     )
                 }
             }
