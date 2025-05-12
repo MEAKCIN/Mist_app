@@ -1,26 +1,16 @@
-// File: src/main/java/com/example/app2/NetworkManager.kt
-package com.example.app2
+package com.example.app2.network
 
 import android.graphics.Bitmap
 import android.util.Base64
 import android.util.Log
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import com.example.app2.data.DeviceStatus
+import kotlinx.coroutines.Dispatchers
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-
-data class DeviceStatus(
-    val sprayPeriod: Float,
-    val sprayDuration: Float,
-    val deviceOn: Boolean,
-    val currentEmotion: String
-)
 
 class NetworkManager {
     companion object {

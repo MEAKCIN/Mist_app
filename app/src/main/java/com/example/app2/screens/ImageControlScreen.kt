@@ -1,5 +1,5 @@
 // File: src/main/java/com/example/app2/ImageControlScreen.kt
-package com.example.app2
+package com.example.app2.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 
@@ -24,32 +25,32 @@ fun ImageControlScreen(
     onSendPhoto: () -> Unit
 ) {
     Column(
-        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(modifier = androidx.compose.ui.Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Button(onClick = onTakePhoto) {
                 Text("Take Photo")
             }
-            Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onUploadPhoto) {
                 Text("Upload Photo")
             }
         }
         photoBitmap?.let {
-            Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = "User taken photo",
-                modifier = androidx.compose.ui.Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
                     .align(Alignment.CenterHorizontally)
             )
-            Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onSendPhoto,
-                modifier = androidx.compose.ui.Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text("Send Photo")
             }

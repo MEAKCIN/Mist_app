@@ -1,5 +1,5 @@
 // File: src/main/java/com/example/app2/ManualControlScreen.kt
-package com.example.app2
+package com.example.app2.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

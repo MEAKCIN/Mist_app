@@ -1,4 +1,4 @@
-package com.example.app2.screen
+package com.example.app2.screens
 
 sealed class Screen(val title: String) {
     object Home : Screen("Home")
