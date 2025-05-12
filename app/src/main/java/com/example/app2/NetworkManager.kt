@@ -1,4 +1,4 @@
-// File: app/src/main/java/com/example/app2/NetworkManager.kt
+// File: src/main/java/com/example/app2/NetworkManager.kt
 package com.example.app2
 
 import android.graphics.Bitmap
@@ -11,8 +11,16 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+
+data class DeviceStatus(
+    val sprayPeriod: Float,
+    val sprayDuration: Float,
+    val deviceOn: Boolean,
+    val currentEmotion: String
+)
 
 class NetworkManager {
     companion object {
@@ -34,7 +42,7 @@ class NetworkManager {
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = json.toRequestBody(mediaType)
             val request = Request.Builder()
-                .url("http://10.0.2.2:5000/upload_try")
+                .url("http://10.0.2.2:5000/upload-manual")
                 .post(requestBody)
                 .build()
             val client = OkHttpClient()
@@ -53,15 +61,10 @@ class NetworkManager {
             bitmap: Bitmap,
             onResponse: (Boolean, String?) -> Unit
         ) {
-            // Convert the bitmap to a JPEG byte array.
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
             val byteArray = outputStream.toByteArray()
-
-            // Use Base64.NO_WRAP to avoid line breaks.
             val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-            // Build JSON payload.
             val json = """
                 {
                     "photo": "$base64String"
@@ -70,7 +73,7 @@ class NetworkManager {
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = json.toRequestBody(mediaType)
             val request = Request.Builder()
-                .url("http://10.0.2.2:5000/upload")
+                .url("http://10.0.2.2:5000/upload-photo")
                 .post(requestBody)
                 .build()
             val client = OkHttpClient()
@@ -80,6 +83,37 @@ class NetworkManager {
                 }
                 override fun onResponse(call: Call, response: Response) {
                     onResponse(response.isSuccessful, response.body?.string())
+                }
+            })
+        }
+
+        fun getDeviceStatus(
+            onResponse: (Boolean, String?, DeviceStatus?) -> Unit
+        ) {
+            val request = Request.Builder()
+                .url("http://10.0.2.2:5000/device")
+                .build()
+            val client = OkHttpClient()
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    Log.e("NetworkManager", "GET failed: ${e.message}")
+                    onResponse(false, e.message, null)
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    response.body?.string()?.let { bodyString ->
+                        try {
+                            val jsonObject = JSONObject(bodyString)
+                            val status = DeviceStatus(
+                                sprayPeriod = jsonObject.getDouble("sprayPeriod").toFloat(),
+                                sprayDuration = jsonObject.getDouble("sprayDuration").toFloat(),
+                                deviceOn = jsonObject.getBoolean("deviceOn"),
+                                currentEmotion = jsonObject.getString("currentEmotion")
+                            )
+                            onResponse(true, null, status)
+                        } catch (e: Exception) {
+                            onResponse(false, e.message, null)
+                        }
+                    } ?: onResponse(false, "Empty response", null)
                 }
             })
         }

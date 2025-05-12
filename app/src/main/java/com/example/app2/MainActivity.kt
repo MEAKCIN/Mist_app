@@ -1,3 +1,4 @@
+// File: src/main/java/com/example/app2/MainActivity.kt
 package com.example.app2
 
 import android.graphics.Bitmap
@@ -31,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -46,9 +48,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 sealed class Screen(val title: String) {
-    object Home : Screen("Ana Sayfa")
-    object Manual : Screen("Manuel Kontrol")
-    object Image : Screen("Görüntü Kontrolü")
+    object Home : Screen("Home")
+    object Manual : Screen("Manual Control")
+    object Image : Screen("Image Control")
 }
 
 class MainActivity : ComponentActivity() {
@@ -68,7 +70,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     var selectedTab by remember { mutableStateOf<Screen>(Screen.Home) }
     var deviceOn by remember { mutableStateOf(true) }
-    var currentEmotion by remember { mutableStateOf("Nötr") }
+    var currentEmotion by remember { mutableStateOf("Neutral") }
     var sprayPeriod by remember { mutableStateOf(1f) }
     var sprayDuration by remember { mutableStateOf(1f) }
     var photoBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -76,6 +78,40 @@ fun MainScreen() {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // Sync device status on startup
+    LaunchedEffect(Unit) {
+        NetworkManager.getDeviceStatus { success, response, status ->
+            if (success && status != null) {
+                sprayPeriod = status.sprayPeriod
+                sprayDuration = status.sprayDuration
+                deviceOn = status.deviceOn
+                currentEmotion = status.currentEmotion
+                scope.launch { snackbarHostState.showSnackbar("Synced successfully") }
+            } else {
+                scope.launch { snackbarHostState.showSnackbar(response ?: "Sync failed") }
+            }
+        }
+    }
+
+    // Function for manual sync
+    fun syncDevice() {
+        scope.launch(Dispatchers.IO) {
+            NetworkManager.getDeviceStatus { success, response, status ->
+                scope.launch {
+                    if (success && status != null) {
+                        sprayPeriod = status.sprayPeriod
+                        sprayDuration = status.sprayDuration
+                        deviceOn = status.deviceOn
+                        currentEmotion = status.currentEmotion
+                        snackbarHostState.showSnackbar("Synced successfully")
+                    } else {
+                        snackbarHostState.showSnackbar(response ?: "Sync failed")
+                    }
+                }
+            }
+        }
+    }
 
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -91,9 +127,9 @@ fun MainScreen() {
                 photoBitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
             } catch (e: Exception) {
                 scope.launch {
-                    snackbarHostState.showSnackbar("Resim yüklenirken hata: ${e.localizedMessage}")
+                    snackbarHostState.showSnackbar("Error uploading image: ${e.localizedMessage}")
                 }
-                println("Resim yüklenirken hata: ${e.message}")
+                println("Error uploading image: ${e.message}")
             }
         }
     }
@@ -104,14 +140,14 @@ fun MainScreen() {
         ) { innerPadding ->
             Box(
                 modifier = Modifier
-                    .fillMaxSize() // Scaffold content alanı kadar yer kapla
-                    .padding(innerPadding) // Scaffold'un kendi iç boşluklarını (FAB, BottomBar vb. için) uygula
-                    .padding(top = if (!navExpanded) 72.dp else 0.dp) // Navigasyon kapalıyken menü butonu için ek üst boşluk
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(top = if (!navExpanded) 72.dp else 0.dp)
             ) {
                 when (selectedTab) {
                     Screen.Home -> HomeScreen(
                         deviceOn = deviceOn,
-                        currentEmotion = if (deviceOn) currentEmotion else "Cihaz Kapalı",
+                        currentEmotion = if (deviceOn) currentEmotion else "Device Off",
                         sprayPeriod = sprayPeriod,
                         sprayDuration = sprayDuration,
                         onSwitchChange = { deviceOn = it },
@@ -127,17 +163,20 @@ fun MainScreen() {
                                         currentEmotion
                                     ) { success, response ->
                                         scope.launch {
-                                            snackbarHostState.showSnackbar(response ?: if (success) "Cihaz güncellendi" else "Güncelleme başarısız")
+                                            snackbarHostState.showSnackbar(
+                                                response ?: if (success) "Device updated" else "Update failed"
+                                            )
                                         }
                                     }
                                 } catch (e: Exception) {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Ağ hatası: ${e.localizedMessage}")
+                                        snackbarHostState.showSnackbar("Network error: ${e.localizedMessage}")
                                     }
-                                    println("AnaEkran güncellemesinde ağ hatası: ${e.message}")
+                                    println("Error updating device: ${e.message}")
                                 }
                             }
-                        }
+                        },
+                        onSyncDevice = { syncDevice() }
                     )
                     Screen.Manual -> ManualControlScreen(
                         deviceOn = deviceOn,
@@ -145,7 +184,7 @@ fun MainScreen() {
                         onEmotionChange = { currentEmotion = it },
                         showDisabledMessage = {
                             scope.launch {
-                                snackbarHostState.showSnackbar("Önce cihazı açın")
+                                snackbarHostState.showSnackbar("Turn on the device first")
                             }
                         },
                         onUpdateDevice = {
@@ -158,14 +197,16 @@ fun MainScreen() {
                                         currentEmotion
                                     ) { success, response ->
                                         scope.launch {
-                                            snackbarHostState.showSnackbar(response ?: if (success) "Cihaz güncellendi" else "Güncelleme başarısız")
+                                            snackbarHostState.showSnackbar(
+                                                response ?: if (success) "Device updated" else "Update failed"
+                                            )
                                         }
                                     }
                                 } catch (e: Exception) {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Ağ hatası: ${e.localizedMessage}")
+                                        snackbarHostState.showSnackbar("Network error: ${e.localizedMessage}")
                                     }
-                                    println("ManuelKontrol güncellemesinde ağ hatası: ${e.message}")
+                                    println("Error updating manual control: ${e.message}")
                                 }
                             }
                         }
@@ -179,13 +220,18 @@ fun MainScreen() {
                                 scope.launch(Dispatchers.IO) {
                                     NetworkManager.sendPhotoRequest(bitmap) { success, response ->
                                         scope.launch {
-                                            snackbarHostState.showSnackbar(response ?: (if (success) "Fotoğraf başarıyla gönderildi" else "Fotoğraf gönderme başarısız"))
+                                            snackbarHostState.showSnackbar(
+                                                response ?: if (success) "Photo sent successfully" else "Send failed"
+                                            )
+                                            if (success) {
+                                                syncDevice()
+                                            }
                                         }
                                     }
                                 }
                             } ?: run {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("Gönderilecek fotoğraf yok")
+                                    snackbarHostState.showSnackbar("No photo to send")
                                 }
                             }
                         }
@@ -201,7 +247,6 @@ fun MainScreen() {
                     .background(Color.Black.copy(alpha = 0.4f))
                     .pointerInput(Unit) {
                         detectTapGestures(onTap = {
-                            println("Scrim tıklandı. navExpanded false olarak ayarlanıyor.")
                             navExpanded = false
                         })
                     }
@@ -211,12 +256,11 @@ fun MainScreen() {
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                 header = {
                     IconButton(onClick = {
-                        println("NavigationRail header içindeki menü düğmesi tıklandı. navExpanded false olarak ayarlanıyor.")
                         navExpanded = false
                     }) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
-                            contentDescription = "Navigasyonu Daralt",
+                            contentDescription = "Collapse Navigation",
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -226,7 +270,6 @@ fun MainScreen() {
                     NavigationRailItem(
                         selected = selectedTab == screen,
                         onClick = {
-                            println("${screen.title} tıklandı. navExpanded false olarak ayarlanıyor.")
                             selectedTab = screen
                             navExpanded = false
                         },
@@ -251,9 +294,7 @@ fun MainScreen() {
         } else {
             IconButton(
                 onClick = {
-                    println("Navigasyonu Aç düğmesi tıklandı. Önceki navExpanded: $navExpanded")
                     navExpanded = true
-                    println("Navigasyonu Aç düğmesi tıklandı. Yeni navExpanded: $navExpanded")
                 },
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -263,7 +304,7 @@ fun MainScreen() {
             ) {
                 Icon(
                     imageVector = Icons.Filled.Menu,
-                    contentDescription = "Navigasyonu Aç",
+                    contentDescription = "Expand Navigation",
                     modifier = Modifier.size(24.dp)
                 )
             }

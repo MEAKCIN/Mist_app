@@ -1,4 +1,4 @@
-// Kotlin
+// File: src/main/java/com/example/app2/ManualControlScreen.kt
 package com.example.app2
 
 import androidx.compose.foundation.layout.Column
@@ -22,7 +22,7 @@ fun ManualControlScreen(
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = if (deviceOn) "Current State: $currentEmotion" else "Current State: Turned Off",
+            text = if (deviceOn) "Current State: $currentEmotion" else "Current State: Device Off",
             modifier = Modifier.padding(bottom = 16.dp)
         )
         val emotions = listOf("Neutral", "Happy", "Angry", "Sad")
@@ -46,7 +46,7 @@ fun ManualControlScreen(
             }
         }
         Button(onClick = onUpdateDevice) {
-            Text(text = "Cihazı Güncelle")
+            Text(text = "Update Device")
         }
     }
 }

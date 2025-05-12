@@ -1,4 +1,4 @@
-// Kotlin
+// File: src/main/java/com/example/app2/HomeScreen.kt
 package com.example.app2
 
 import androidx.compose.animation.core.tween
@@ -36,7 +36,8 @@ fun HomeScreen(
     onSwitchChange: (Boolean) -> Unit,
     onPeriodChange: (Float) -> Unit,
     onDurationChange: (Float) -> Unit,
-    onUpdateDevice: () -> Unit
+    onUpdateDevice: () -> Unit,
+    onSyncDevice: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -70,7 +71,10 @@ fun HomeScreen(
             )
         }
         Button(onClick = onUpdateDevice) {
-            Text(text = "Cihazı Güncelle")
+            Text(text = "Update Device")
+        }
+        Button(onClick = onSyncDevice) {
+            Text(text = "Sync Device")
         }
     }
 }
@@ -92,7 +96,6 @@ fun MySlider(
         modifier = modifier.layout { measurable, constraints ->
             val placeable = measurable.measure(constraints)
             layout(placeable.width, placeable.height) {
-                // Shift slider so that the thumb starts to the left.
                 placeable.place((-thumbRadiusPx).roundToInt(), 0)
             }
         }

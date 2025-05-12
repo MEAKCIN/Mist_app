@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Mist Android</string>
+
+    <string name="home">Ana Sayfa</string>
+    <string name="manual_control">Manuel Kontrol</string>
+    <string name="image_control">Görüntü Kontrolü</string>
+    <string name="settings">Ayarlar</string>
+
+    <string name="language">Dil</string>
+    <string name="change_language_to_english">İngilizce</string>
+    <string name="change_language_to_turkish">Türkçe</string>
+    <string name="select_language">Dil Seçin</string>
+
+    <string name="send_data">Veri Gönder</string>
+    <string name="status_waiting">Durum: Bağlantı bekleniyor...</string>
+    <string name="status_connected">Durum: %s adresine bağlandı</string>
+    <string name="status_error">Durum: Hata - %s</string>
+    <string name="status_disconnected">Durum: Bağlantı kesildi</string>
+    <string name="status_connecting">Durum: Bağlanılıyor...</string>
+    <string name="ip_address">IP Adresi</string>
+    <string name="port">Port</string>
+    <string name="connect">Bağlan</string>
+    <string name="disconnect">Bağlantıyı Kes</string>
+    <string name="message_hint">Mesaj girin</string>
+    <string name="data_to_send">Gönderilecek Veri</string>
+    <string name="received_data">Alınan Veri:</string>
+    <string name="no_image_selected">Resim seçilmedi</string>
+    <string name="select_image">Resim Seç</string>
+    <string name="upload_image">Resim Yükle</string>
+    <string name="image_upload_success">Resim başarıyla yüklendi!</string>
+    <string name="image_upload_failed">Resim yükleme başarısız: %s</string>
+    <string name="error_selecting_image">Resim seçme hatası: %s</string>
+    <string name="value_x">Değer X</string>
+    <string name="value_y">Değer Y</string>
+    <string name="value_z">Değer Z</string>
+    <string name="error_invalid_json">Hata: Geçersiz JSON formatı</string>
+    <string name="error_sending_data">Veri gönderme hatası: %s</string>
+    <string name="data_sent_successfully">Veri başarıyla gönderildi</string>
+    <string name="not_connected_error">Herhangi bir cihaza bağlı değil.</string>
+
+    <string name="refresh">Yenile</string>
+    <string name="update_device_button">Cihaz Ayarlarını Güncelle</string> <string name="current_situation_label">Mevcut Durum: %s</string>
+    <string name="spray_period_min_label">Sprey Periyodu (dk): %d</string>
+    <string name="spray_duration_sec_label">Sprey Süresi (sn): %d</string>
+    <string name="device_on_off_label">Cihaz Açık/Kapalı:</string>
+    <string name="loading_device_status">Cihaz durumu yükleniyor...</string>
+    <string name="error_prefix">Hata: %s</string>
+    <string name="retry">Tekrar Dene</string>
+    <string name="status_not_available">Cihaz durumu mevcut değil. Yenilemeyi deneyin.</string>
+</resources>
