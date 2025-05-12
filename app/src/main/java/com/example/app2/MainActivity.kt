@@ -1,4 +1,3 @@
-// File: src/main/java/com/example/app2/MainActivity.kt
 package com.example.app2
 
 import android.graphics.Bitmap
@@ -43,23 +42,22 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.app2.screen.Screen
 import com.example.app2.ui.theme.App2Theme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-sealed class Screen(val title: String) {
-    object Home : Screen("Home")
-    object Manual : Screen("Manual Control")
-    object Image : Screen("Image Control")
-}
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            App2Theme {
-                MainScreen()
+            var darkTheme by remember { mutableStateOf(false) }
+            App2Theme(darkTheme = darkTheme) {
+                MainScreen(
+                    darkTheme = darkTheme,
+                    onDarkThemeChange = { darkTheme = it }
+                )
             }
         }
     }
@@ -67,7 +65,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit
+) {
     var selectedTab by remember { mutableStateOf<Screen>(Screen.Home) }
     var deviceOn by remember { mutableStateOf(true) }
     var currentEmotion by remember { mutableStateOf("Neutral") }
@@ -79,7 +80,6 @@ fun MainScreen() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Sync device status on startup
     LaunchedEffect(Unit) {
         NetworkManager.getDeviceStatus { success, response, status ->
             if (success && status != null) {
@@ -94,7 +94,6 @@ fun MainScreen() {
         }
     }
 
-    // Function for manual sync
     fun syncDevice() {
         scope.launch(Dispatchers.IO) {
             NetworkManager.getDeviceStatus { success, response, status ->
@@ -129,7 +128,6 @@ fun MainScreen() {
                 scope.launch {
                     snackbarHostState.showSnackbar("Error uploading image: ${e.localizedMessage}")
                 }
-                println("Error uploading image: ${e.message}")
             }
         }
     }
@@ -155,24 +153,17 @@ fun MainScreen() {
                         onDurationChange = { sprayDuration = it },
                         onUpdateDevice = {
                             scope.launch(Dispatchers.IO) {
-                                try {
-                                    NetworkManager.updateDeviceRequest(
-                                        sprayPeriod,
-                                        sprayDuration,
-                                        deviceOn,
-                                        currentEmotion
-                                    ) { success, response ->
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                response ?: if (success) "Device updated" else "Update failed"
-                                            )
-                                        }
-                                    }
-                                } catch (e: Exception) {
+                                NetworkManager.updateDeviceRequest(
+                                    sprayPeriod,
+                                    sprayDuration,
+                                    deviceOn,
+                                    currentEmotion
+                                ) { success, response ->
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Network error: ${e.localizedMessage}")
+                                        snackbarHostState.showSnackbar(
+                                            response ?: if (success) "Device updated" else "Update failed"
+                                        )
                                     }
-                                    println("Error updating device: ${e.message}")
                                 }
                             }
                         },
@@ -189,24 +180,17 @@ fun MainScreen() {
                         },
                         onUpdateDevice = {
                             scope.launch(Dispatchers.IO) {
-                                try {
-                                    NetworkManager.updateDeviceRequest(
-                                        sprayPeriod,
-                                        sprayDuration,
-                                        deviceOn,
-                                        currentEmotion
-                                    ) { success, response ->
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                response ?: if (success) "Device updated" else "Update failed"
-                                            )
-                                        }
-                                    }
-                                } catch (e: Exception) {
+                                NetworkManager.updateDeviceRequest(
+                                    sprayPeriod,
+                                    sprayDuration,
+                                    deviceOn,
+                                    currentEmotion
+                                ) { success, response ->
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Network error: ${e.localizedMessage}")
+                                        snackbarHostState.showSnackbar(
+                                            response ?: if (success) "Device updated" else "Update failed"
+                                        )
                                     }
-                                    println("Error updating manual control: ${e.message}")
                                 }
                             }
                         }
@@ -236,28 +220,24 @@ fun MainScreen() {
                             }
                         }
                     )
+                    Screen.Settings -> SettingsScreen(
+                        darkTheme = darkTheme,
+                        onDarkThemeChange = onDarkThemeChange
+                    )
                 }
             }
         }
-
         if (navExpanded) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.4f))
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = {
-                            navExpanded = false
-                        })
-                    }
+                    .pointerInput(Unit) { detectTapGestures(onTap = { navExpanded = false }) }
             )
-
             NavigationRail(
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                 header = {
-                    IconButton(onClick = {
-                        navExpanded = false
-                    }) {
+                    IconButton(onClick = { navExpanded = false }) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = "Collapse Navigation",
@@ -266,7 +246,7 @@ fun MainScreen() {
                     }
                 }
             ) {
-                listOf(Screen.Home, Screen.Manual, Screen.Image).forEach { screen ->
+                listOf(Screen.Home, Screen.Manual, Screen.Image, Screen.Settings).forEach { screen ->
                     NavigationRailItem(
                         selected = selectedTab == screen,
                         onClick = {
@@ -278,12 +258,13 @@ fun MainScreen() {
                                 Screen.Home -> painterResource(id = R.drawable.home)
                                 Screen.Manual -> painterResource(id = R.drawable.manual_control_icon)
                                 Screen.Image -> painterResource(id = R.drawable.image_upload)
+                                Screen.Settings -> painterResource(id = R.drawable.settings_icon)
                             }
                             Icon(
                                 painter = iconPainter,
                                 contentDescription = screen.title,
                                 modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified
+                                tint = if (darkTheme) Color.White else Color.Unspecified
                             )
                         },
                         label = { Text(text = screen.title) },
@@ -293,9 +274,7 @@ fun MainScreen() {
             }
         } else {
             IconButton(
-                onClick = {
-                    navExpanded = true
-                },
+                onClick = { navExpanded = true },
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .windowInsetsPadding(WindowInsets.statusBars)

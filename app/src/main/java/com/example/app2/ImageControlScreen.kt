@@ -1,3 +1,4 @@
+// File: src/main/java/com/example/app2/ImageControlScreen.kt
 package com.example.app2
 
 import android.graphics.Bitmap
