@@ -25,7 +25,7 @@ fun ManualControlScreen(
             text = if (deviceOn) "Current State: $currentEmotion" else "Current State: Device Off",
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        val emotions = listOf("Neutral", "Happy", "Angry", "Sad")
+        val emotions = listOf("Neutral", "Happy", "Surprise", "Sad")
         emotions.forEach { emotion ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
