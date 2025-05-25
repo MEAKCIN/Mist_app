@@ -41,8 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.app2.R
-
-
+import com.example.app2.data.EmotionSetting
 import com.example.app2.network.NetworkManager
 import com.example.app2.screens.HomeScreen
 import com.example.app2.screens.ImageControlScreen
@@ -60,45 +59,54 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableStateOf<Screen>(Screen.Home) }
     var deviceOn by remember { mutableStateOf(true) }
-    var currentEmotion by remember { mutableStateOf("Neutral") }
-    var sprayPeriod by remember { mutableStateOf(1f) }
-    var sprayDuration by remember { mutableStateOf(1f) }
+
+    val defaultEmotionSettings = listOf(
+        EmotionSetting("Neutral", 1f, 1f, false),
+        EmotionSetting("Happy", 10f, 5f, true),
+        EmotionSetting("Surprise", 5f, 2f, false),
+        EmotionSetting("Sad", 20f, 10f, false)
+    )
+    var emotionSettings by remember { mutableStateOf<List<EmotionSetting>>(defaultEmotionSettings) }
+
     var photoBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var navExpanded by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        NetworkManager.getDeviceStatus { success, response, status ->
-            if (success && status != null) {
-                sprayPeriod = status.sprayPeriod
-                sprayDuration = status.sprayDuration
-                deviceOn = status.deviceOn
-                currentEmotion = status.currentEmotion
-                scope.launch { snackbarHostState.showSnackbar("Synced successfully") }
-            } else {
-                scope.launch { snackbarHostState.showSnackbar(response ?: "Sync failed") }
-            }
-        }
-    }
-
     fun syncDevice() {
         scope.launch(Dispatchers.IO) {
             NetworkManager.getDeviceStatus { success, response, status ->
                 scope.launch {
                     if (success && status != null) {
-                        sprayPeriod = status.sprayPeriod
-                        sprayDuration = status.sprayDuration
+                        emotionSettings = if (status.emotions.isNotEmpty()) status.emotions else defaultEmotionSettings
                         deviceOn = status.deviceOn
-                        currentEmotion = status.currentEmotion
                         snackbarHostState.showSnackbar("Synced successfully")
                     } else {
-                        snackbarHostState.showSnackbar(response ?: "Sync failed")
+                        snackbarHostState.showSnackbar(response ?: "Sync failed. Using default/previous settings.")
                     }
                 }
             }
         }
+    }
+
+    fun updateDeviceSettings() {
+        scope.launch(Dispatchers.IO) {
+            NetworkManager.updateDeviceRequest(
+                deviceOn,
+                emotionSettings
+            ) { success, response ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        response ?: if (success) "Device settings updated" else "Device update failed"
+                    )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        syncDevice()
     }
 
     val photoLauncher = rememberLauncherForActivityResult(
@@ -135,53 +143,19 @@ fun MainScreen(
                     Screen.Home ->
                         HomeScreen(
                             deviceOn = deviceOn,
-                            currentEmotion = if (deviceOn) currentEmotion else "Device Off",
-                            sprayPeriod = sprayPeriod,
-                            sprayDuration = sprayDuration,
-                            onSwitchChange = { deviceOn = it },
-                            onPeriodChange = { sprayPeriod = it },
-                            onDurationChange = { sprayDuration = it },
-                            onUpdateDevice = {
-                                scope.launch(Dispatchers.IO) {
-                                    NetworkManager.updateDeviceRequest(
-                                        sprayPeriod,
-                                        sprayDuration,
-                                        deviceOn,
-                                        currentEmotion
-                                    ) { success, response ->
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                response ?: if (success) "Device updated" else "Update failed"
-                                            )
-                                        }
-                                    }
-                                }
-                            },
+                            onDeviceOnSwitchChange = { deviceOn = it },
+                            onUpdateDevice = { updateDeviceSettings() },
                             onSyncDevice = { syncDevice() }
                         )
                     Screen.Manual ->
                         ManualControlScreen(
                             deviceOn = deviceOn,
-                            currentEmotion = currentEmotion,
-                            onEmotionChange = { currentEmotion = it },
-                            showDisabledMessage = {
-                                scope.launch { snackbarHostState.showSnackbar("Turn on the device first") }
+                            emotionSettings = emotionSettings,
+                            onEmotionSettingChange = { updatedSettings ->
+                                emotionSettings = updatedSettings
                             },
-                            onUpdateDevice = {
-                                scope.launch(Dispatchers.IO) {
-                                    NetworkManager.updateDeviceRequest(
-                                        sprayPeriod,
-                                        sprayDuration,
-                                        deviceOn,
-                                        currentEmotion
-                                    ) { success, response ->
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                response ?: if (success) "Device updated" else "Update failed"
-                                            )
-                                        }
-                                    }
-                                }
+                            showDisabledMessage = {
+                                scope.launch { snackbarHostState.showSnackbar("Device is Off. Action disabled.") }
                             }
                         )
                     Screen.Image ->
@@ -228,12 +202,12 @@ fun MainScreen(
                 header = {
                     IconButton(
                         onClick = { navExpanded = false },
-                        modifier = Modifier.size(48.dp) // increased button size
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = "Collapse Navigation",
-                            modifier = Modifier.size(36.dp) // increased icon size
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
@@ -255,8 +229,9 @@ fun MainScreen(
                             Icon(
                                 painter = iconPainter,
                                 contentDescription = screen.title,
-                                modifier = Modifier.size(36.dp), // update size if necessary
-                                tint = if (darkTheme) Color.White else Color.Unspecified
+                                modifier = Modifier.size(36.dp),
+                                // MODIFICATION HERE:
+                                tint = Color.Unspecified // Apply no explicit tint, use original icon colors
                             )
                         },
                         label = { Text(text = screen.title) },
