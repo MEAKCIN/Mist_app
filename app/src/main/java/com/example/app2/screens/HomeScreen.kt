@@ -7,7 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.app2.R
 
 @Composable
 fun HomeScreen(
@@ -15,22 +17,21 @@ fun HomeScreen(
     onDeviceOnSwitchChange: (Boolean) -> Unit,
     onUpdateDevice: () -> Unit,
     onSyncDevice: () -> Unit
-    // Removed emotionSettings and related callbacks
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center // Center the simplified controls
+        verticalArrangement = Arrangement.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp) // Increased spacing
+                .padding(bottom = 32.dp)
         ) {
-            Text(text = "Device On/Off:", modifier = Modifier.weight(1f))
+            Text(text = stringResource(R.string.device_on_off), modifier = Modifier.weight(1f))
             Switch(
                 checked = deviceOn,
                 onCheckedChange = onDeviceOnSwitchChange
@@ -42,9 +43,9 @@ fun HomeScreen(
         Button(
             onClick = onUpdateDevice,
             modifier = Modifier.fillMaxWidth(),
-            enabled = deviceOn // Update button might only be enabled if device is on
+            enabled = deviceOn
         ) {
-            Text(text = "Update Device Settings")
+            Text(text = stringResource(R.string.update_device_settings))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -53,7 +54,7 @@ fun HomeScreen(
             onClick = onSyncDevice,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Sync Device Status")
+            Text(text = stringResource(R.string.sync_device_status))
         }
     }
 }

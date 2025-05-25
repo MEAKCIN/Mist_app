@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.app2.R
 import com.example.app2.data.EmotionSetting
@@ -55,13 +56,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     darkTheme: Boolean,
-    onDarkThemeChange: (Boolean) -> Unit
+    onDarkThemeChange: (Boolean) -> Unit,
+    currentLanguage: String,
+    onLanguageChange: (String) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf<Screen>(Screen.Home) }
     var deviceOn by remember { mutableStateOf(true) }
 
     val defaultEmotionSettings = listOf(
-        EmotionSetting("Neutral", 1f, 1f, false),
+        EmotionSetting("Neutral", 1f, 1f, false), // Emotion names could also be localized if static
         EmotionSetting("Happy", 10f, 5f, true),
         EmotionSetting("Surprise", 5f, 2f, false),
         EmotionSetting("Sad", 20f, 10f, false)
@@ -74,6 +77,18 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    // Localized strings for snackbar messages
+    val syncedSuccessfullyMessage = stringResource(R.string.synced_successfully)
+    val syncFailedDefaultMessage = stringResource(R.string.sync_failed_default)
+    val deviceSettingsUpdatedMessage = stringResource(R.string.device_settings_updated)
+    val deviceUpdateFailedMessage = stringResource(R.string.device_update_failed)
+    val errorUploadingImageMessage = stringResource(R.string.error_uploading_image)
+    val photoSentSuccessfullyMessage = stringResource(R.string.photo_sent_successfully)
+    val sendFailedMessage = stringResource(R.string.send_failed)
+    val noPhotoToSendMesssage = stringResource(R.string.no_photo_to_send)
+    val deviceOffActionDisabledMessage = stringResource(R.string.device_off_action_disabled)
+
+
     fun syncDevice() {
         scope.launch(Dispatchers.IO) {
             NetworkManager.getDeviceStatus { success, response, status ->
@@ -81,9 +96,9 @@ fun MainScreen(
                     if (success && status != null) {
                         emotionSettings = if (status.emotions.isNotEmpty()) status.emotions else defaultEmotionSettings
                         deviceOn = status.deviceOn
-                        snackbarHostState.showSnackbar("Synced successfully")
+                        snackbarHostState.showSnackbar(syncedSuccessfullyMessage)
                     } else {
-                        snackbarHostState.showSnackbar(response ?: "Sync failed. Using default/previous settings.")
+                        snackbarHostState.showSnackbar(response ?: syncFailedDefaultMessage)
                     }
                 }
             }
@@ -98,7 +113,7 @@ fun MainScreen(
             ) { success, response ->
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        response ?: if (success) "Device settings updated" else "Device update failed"
+                        response ?: if (success) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                     )
                 }
             }
@@ -123,11 +138,22 @@ fun MainScreen(
                 photoBitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
             } catch (e: Exception) {
                 scope.launch {
-                    snackbarHostState.showSnackbar("Error uploading image: ${e.localizedMessage}")
+                    snackbarHostState.showSnackbar(
+                        errorUploadingImageMessage.format(e.localizedMessage)
+                    )
                 }
             }
         }
     }
+
+    val screenHomeTitle = stringResource(R.string.home)
+    val screenManualTitle = stringResource(R.string.manual_control)
+    val screenImageTitle = stringResource(R.string.image_control)
+    val screenSettingsTitle = stringResource(R.string.settings)
+
+    val collapseNavDesc = stringResource(R.string.collapse_navigation)
+    val expandNavDesc = stringResource(R.string.expand_navigation)
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -155,7 +181,7 @@ fun MainScreen(
                                 emotionSettings = updatedSettings
                             },
                             showDisabledMessage = {
-                                scope.launch { snackbarHostState.showSnackbar("Device is Off. Action disabled.") }
+                                scope.launch { snackbarHostState.showSnackbar(deviceOffActionDisabledMessage) }
                             }
                         )
                     Screen.Image ->
@@ -169,21 +195,23 @@ fun MainScreen(
                                         NetworkManager.sendPhotoRequest(bitmap) { success, response ->
                                             scope.launch {
                                                 snackbarHostState.showSnackbar(
-                                                    response ?: if (success) "Photo sent successfully" else "Send failed"
+                                                    response ?: if (success) photoSentSuccessfullyMessage else sendFailedMessage
                                                 )
                                                 if (success) syncDevice()
                                             }
                                         }
                                     }
                                 } ?: run {
-                                    scope.launch { snackbarHostState.showSnackbar("No photo to send") }
+                                    scope.launch { snackbarHostState.showSnackbar(noPhotoToSendMesssage) }
                                 }
                             }
                         )
                     Screen.Settings ->
                         SettingsScreen(
                             darkTheme = darkTheme,
-                            onDarkThemeChange = onDarkThemeChange
+                            onDarkThemeChange = onDarkThemeChange,
+                            currentLanguage = currentLanguage,
+                            onLanguageChange = onLanguageChange
                         )
                 }
             }
@@ -198,7 +226,8 @@ fun MainScreen(
             NavigationRail(
                 modifier = Modifier
                     .width(200.dp)
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(MaterialTheme.colorScheme.surface)
+                    .windowInsetsPadding(WindowInsets.statusBars),
                 header = {
                     IconButton(
                         onClick = { navExpanded = false },
@@ -206,32 +235,39 @@ fun MainScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
-                            contentDescription = "Collapse Navigation",
+                            contentDescription = collapseNavDesc,
                             modifier = Modifier.size(36.dp)
                         )
                     }
                 }
             ) {
-                listOf(Screen.Home, Screen.Manual, Screen.Image, Screen.Settings).forEach { screen ->
+                val screens = listOf(
+                    Screen.Home.apply { title = screenHomeTitle },
+                    Screen.Manual.apply { title = screenManualTitle },
+                    Screen.Image.apply { title = screenImageTitle },
+                    Screen.Settings.apply { title = screenSettingsTitle }
+                )
+
+                screens.forEach { screen ->
                     NavigationRailItem(
-                        selected = selectedTab == screen,
+                        selected = selectedTab.route == screen.route,
                         onClick = {
                             selectedTab = screen
                             navExpanded = false
                         },
                         icon = {
-                            val iconPainter = when (screen) {
-                                Screen.Home -> painterResource(id = R.drawable.home)
-                                Screen.Manual -> painterResource(id = R.drawable.manual_control_icon)
-                                Screen.Image -> painterResource(id = R.drawable.image_upload)
-                                Screen.Settings -> painterResource(id = R.drawable.settings_icon)
+                            val iconPainter = when (screen.route) {
+                                Screen.Home.route -> painterResource(id = R.drawable.home)
+                                Screen.Manual.route -> painterResource(id = R.drawable.manual_control_icon)
+                                Screen.Image.route -> painterResource(id = R.drawable.image_upload)
+                                Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
+                                else -> painterResource(id = R.drawable.home)
                             }
                             Icon(
                                 painter = iconPainter,
-                                contentDescription = screen.title,
+                                contentDescription = screen.title, // Screen titles are already localized
                                 modifier = Modifier.size(36.dp),
-                                // MODIFICATION HERE:
-                                tint = Color.Unspecified // Apply no explicit tint, use original icon colors
+                                tint = Color.Unspecified
                             )
                         },
                         label = { Text(text = screen.title) },
@@ -250,10 +286,16 @@ fun MainScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Menu,
-                    contentDescription = "Expand Navigation",
+                    contentDescription = expandNavDesc,
                     modifier = Modifier.size(24.dp)
                 )
             }
         }
     }
 }
+
+//todo font büyüt
+//todo renk ekle
+//todo dark mode optimize olsun
+//todo manual control configure kısmını sil
+//todo manual kısmında açılıp kapanmalı yap

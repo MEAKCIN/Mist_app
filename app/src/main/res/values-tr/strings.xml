@@ -6,10 +6,34 @@
     <string name="image_control">Görüntü Kontrolü</string>
     <string name="settings">Ayarlar</string>
 
+    <string name="dark_theme">Karanlık Tema</string>
     <string name="language">Dil</string>
+    <string name="select_language">Dil Seçin</string>
     <string name="change_language_to_english">İngilizce</string>
     <string name="change_language_to_turkish">Türkçe</string>
-    <string name="select_language">Dil Seçin</string>
+
+    <string name="device_on_off">Cihaz Açık/Kapalı:</string>
+    <string name="update_device_settings">Cihaz Ayarlarını Güncelle</string> <string name="sync_device_status">Cihaz Durumunu Senkronize Et</string>
+
+    <string name="configure_emotion_settings">Duygu Ayarlarını Yapılandır:</string>
+    <string name="device_off_title">Cihaz KAPALI.</string>
+    <string name="device_off_subtitle">Duyguları yapılandırmak için Ana Sayfa\'dan cihazı açın.</string>
+    <string name="spray_period_min">Püskürtme Periyodu (dk): %d</string> <string name="spray_duration_sec">Püskürtme Süresi (sn): %d</string> <string name="take_photo">Fotoğraf Çek</string>
+    <string name="upload_photo">Fotoğraf Yükle</string> <string name="send_photo">Fotoğraf Gönder</string>
+    <string name="user_taken_photo">Kullanıcının çektiği fotoğraf</string>
+    <string name="no_photo_to_send">Gönderilecek fotoğraf yok</string>
+    <string name="error_uploading_image">Resim yükleme hatası: %s</string>
+    <string name="photo_sent_successfully">Fotoğraf başarıyla gönderildi</string>
+    <string name="send_failed">Gönderme başarısız</string>
+
+    <string name="synced_successfully">Başarıyla senkronize edildi</string>
+    <string name="sync_failed_default">Senkronizasyon başarısız. Varsayılan/önceki ayarlar kullanılıyor.</string>
+    <string name="device_settings_updated">Cihaz ayarları güncellendi</string>
+    <string name="device_update_failed">Cihaz güncelleme başarısız</string>
+    <string name="device_off_action_disabled">Cihaz Kapalı. İşlem devre dışı.</string>
+
+    <string name="collapse_navigation">Navigasyonu Daralt</string>
+    <string name="expand_navigation">Navigasyonu Genişlet</string>
 
     <string name="send_data">Veri Gönder</string>
     <string name="status_waiting">Durum: Bağlantı bekleniyor...</string>
@@ -26,7 +50,6 @@
     <string name="received_data">Alınan Veri:</string>
     <string name="no_image_selected">Resim seçilmedi</string>
     <string name="select_image">Resim Seç</string>
-    <string name="upload_image">Resim Yükle</string>
     <string name="image_upload_success">Resim başarıyla yüklendi!</string>
     <string name="image_upload_failed">Resim yükleme başarısız: %s</string>
     <string name="error_selecting_image">Resim seçme hatası: %s</string>
@@ -37,11 +60,8 @@
     <string name="error_sending_data">Veri gönderme hatası: %s</string>
     <string name="data_sent_successfully">Veri başarıyla gönderildi</string>
     <string name="not_connected_error">Herhangi bir cihaza bağlı değil.</string>
-
     <string name="refresh">Yenile</string>
-    <string name="update_device_button">Cihaz Ayarlarını Güncelle</string> <string name="current_situation_label">Mevcut Durum: %s</string>
-    <string name="spray_period_min_label">Sprey Periyodu (dk): %d</string>
-    <string name="spray_duration_sec_label">Sprey Süresi (sn): %d</string>
+    <string name="current_situation_label">Mevcut Durum: %s</string>
     <string name="device_on_off_label">Cihaz Açık/Kapalı:</string>
     <string name="loading_device_status">Cihaz durumu yükleniyor...</string>
     <string name="error_prefix">Hata: %s</string>

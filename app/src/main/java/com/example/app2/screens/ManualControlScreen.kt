@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.app2.data.EmotionSetting // Ensure this import is correct
+import com.example.app2.R
+import com.example.app2.data.EmotionSetting
 import kotlin.math.roundToInt
 
 @Composable
@@ -17,8 +19,7 @@ fun ManualControlScreen(
     deviceOn: Boolean,
     emotionSettings: List<EmotionSetting>,
     onEmotionSettingChange: (List<EmotionSetting>) -> Unit,
-    showDisabledMessage: () -> Unit // Kept if needed for other interactions
-    // Removed onUpdateDevice from here, as it's on HomeScreen now
+    showDisabledMessage: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -27,12 +28,12 @@ fun ManualControlScreen(
     ) {
         if (deviceOn) {
             Text(
-                "Configure Emotion Settings:",
+                stringResource(R.string.configure_emotion_settings),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             LazyColumn(
-                modifier = Modifier.weight(1f), // Allow column to take available space
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(emotionSettings) { index, setting ->
@@ -47,18 +48,14 @@ fun ManualControlScreen(
                     )
                 }
             }
-            // The "Update Device" button is now on the HomeScreen.
-            // Changes made here are stored in MainScreen's state and sent when
-            // "Update Device" on HomeScreen is pressed.
         } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Device is OFF.")
-                Text("Turn it on from the Home screen to configure emotions.")
-                // Call showDisabledMessage if a specific interaction attempt is made while off
+                Text(stringResource(R.string.device_off_title))
+                Text(stringResource(R.string.device_off_subtitle))
             }
         }
     }
@@ -84,7 +81,7 @@ fun EmotionControlCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = emotionSetting.name,
+                    text = emotionSetting.name, // Emotion names might also need localization if they are not dynamic
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -99,7 +96,7 @@ fun EmotionControlCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Spray Period (min): ${emotionSetting.sprayPeriod.roundToInt()}")
+            Text(text = stringResource(R.string.spray_period_min, emotionSetting.sprayPeriod.roundToInt()))
             MySlider(
                 value = emotionSetting.sprayPeriod,
                 onValueChange = { period ->
@@ -112,7 +109,7 @@ fun EmotionControlCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Spray Duration (sec): ${emotionSetting.sprayDuration.roundToInt()}")
+            Text(text = stringResource(R.string.spray_duration_sec, emotionSetting.sprayDuration.roundToInt()))
             MySlider(
                 value = emotionSetting.sprayDuration,
                 onValueChange = { duration ->
@@ -128,7 +125,7 @@ fun EmotionControlCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MySlider(
+fun MySlider( // This composable itself doesn't have user-facing text
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
