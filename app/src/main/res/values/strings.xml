@@ -1,10 +1,13 @@
 <resources>
-    <string name="app_name">app2</string>
+    <string name="app_name">Mist App</string>
 
     <string name="home">Home</string>
     <string name="manual_control">Manual Control</string>
     <string name="image_control">Image Control</string>
     <string name="settings">Settings</string>
+    <string name="profile_management">Profile Management</string>
+    <string name="collapse_navigation">Collapse Navigation</string>
+    <string name="expand_navigation">Expand Navigation</string>
 
     <string name="dark_theme">Dark Theme</string>
     <string name="language">Language</string>
@@ -12,12 +15,16 @@
     <string name="change_language_to_english">English</string>
     <string name="change_language_to_turkish">Turkish</string>
 
-    <string name="device_on_off">Device On/Off:</string>
+    <string name="active_profile">Active Profile</string>
+    <string name="select_profile">Select Profile</string>
+    <string name="device_on_off">Device On/Off</string>
     <string name="update_device_settings">Update Device Settings</string>
     <string name="sync_device_status">Sync Device Status</string>
+    <string name="no_profiles_to_update_device">No profiles available to update device.</string>
 
-    <string name="configure_emotion_settings">Configure Emotion Settings:</string>
-    <string name="device_off_title">Device is OFF.</string>
+
+    <string name="configure_emotion_settings">Configure Emotion Settings</string>
+    <string name="device_off_title">Device is OFF</string>
     <string name="device_off_subtitle">Turn it on from the Home screen to configure emotions.</string>
     <string name="spray_period_min">Spray Period (min): %d</string>
     <string name="spray_duration_sec">Spray Duration (sec): %d</string>
@@ -25,19 +32,29 @@
     <string name="take_photo">Take Photo</string>
     <string name="upload_photo">Upload Photo</string>
     <string name="send_photo">Send Photo</string>
-    <string name="user_taken_photo">User taken photo</string> <string name="no_photo_to_send">No photo to send</string>
+    <string name="user_taken_photo">User-taken photo</string>
+    <string name="no_photo_to_send">No photo to send</string>
     <string name="error_uploading_image">Error uploading image: %s</string>
     <string name="photo_sent_successfully">Photo sent successfully</string>
     <string name="send_failed">Send failed</string>
+
+    <string name="default_profile_name">Default</string>
+    <string name="add_profile">Add Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="delete_profile">Delete Profile</string>
+    <string name="create_new_profile">Create New Profile</string>
+    <string name="edit_profile_title">Edit Profile: %s</string>
+    <string name="profile_name">Profile Name</string>
+    <string name="configure_emotion_settings_for_profile">Configure Emotion Settings for Profile</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="profile_saved_successfully">Profile saved successfully.</string>
+    <string name="profile_deleted_successfully">Profile deleted successfully.</string>
 
     <string name="synced_successfully">Synced successfully</string>
     <string name="sync_failed_default">Sync failed. Using default/previous settings.</string>
     <string name="device_settings_updated">Device settings updated</string>
     <string name="device_update_failed">Device update failed</string>
     <string name="device_off_action_disabled">Device is Off. Action disabled.</string>
-
-    <string name="collapse_navigation">Collapse Navigation</string>
-    <string name="expand_navigation">Expand Navigation</string>
 
     <string name="send_data">Send Data</string>
     <string name="status_waiting">Status: Waiting for connection...</string>
@@ -66,8 +83,9 @@
     <string name="not_connected_error">Not connected to any device.</string>
     <string name="refresh">Refresh</string>
     <string name="current_situation_label">Current Status: %s</string>
-    <string name="device_on_off_label">Device On/Off:</string> <string name="loading_device_status">Loading device status...</string>
+    <string name="loading_device_status">Loading device status...</string>
     <string name="error_prefix">Error: %s</string>
     <string name="retry">Retry</string>
     <string name="status_not_available">Device status not available. Try refreshing.</string>
+
 </resources>

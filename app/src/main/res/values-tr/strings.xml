@@ -1,10 +1,13 @@
 <resources>
-    <string name="app_name">Mist Android</string>
+    <string name="app_name">Mist Uygulaması</string>
 
     <string name="home">Ana Sayfa</string>
     <string name="manual_control">Manuel Kontrol</string>
     <string name="image_control">Görüntü Kontrolü</string>
     <string name="settings">Ayarlar</string>
+    <string name="profile_management">Profil Yönetimi</string>
+    <string name="collapse_navigation">Navigasyonu Daralt</string>
+    <string name="expand_navigation">Navigasyonu Genişlet</string>
 
     <string name="dark_theme">Karanlık Tema</string>
     <string name="language">Dil</string>
@@ -12,28 +15,45 @@
     <string name="change_language_to_english">İngilizce</string>
     <string name="change_language_to_turkish">Türkçe</string>
 
-    <string name="device_on_off">Cihaz Açık/Kapalı:</string>
-    <string name="update_device_settings">Cihaz Ayarlarını Güncelle</string> <string name="sync_device_status">Cihaz Durumunu Senkronize Et</string>
+    <string name="active_profile">Aktif Profil</string>
+    <string name="select_profile">Profil Seç</string>
+    <string name="device_on_off">Cihaz Açık/Kapalı</string>
+    <string name="update_device_settings">Cihaz Ayarlarını Güncelle</string>
+    <string name="sync_device_status">Cihaz Durumunu Eşitle</string>
+    <string name="no_profiles_to_update_device">Cihazı güncellemek için kullanılabilir profil yok.</string>
 
-    <string name="configure_emotion_settings">Duygu Ayarlarını Yapılandır:</string>
-    <string name="device_off_title">Cihaz KAPALI.</string>
+    <string name="configure_emotion_settings">Duygu Ayarlarını Yapılandır</string>
+    <string name="device_off_title">Cihaz KAPALI</string>
     <string name="device_off_subtitle">Duyguları yapılandırmak için Ana Sayfa\'dan cihazı açın.</string>
-    <string name="spray_period_min">Püskürtme Periyodu (dk): %d</string> <string name="spray_duration_sec">Püskürtme Süresi (sn): %d</string> <string name="take_photo">Fotoğraf Çek</string>
-    <string name="upload_photo">Fotoğraf Yükle</string> <string name="send_photo">Fotoğraf Gönder</string>
+    <string name="spray_period_min">Püskürtme Periyodu (dk): %d</string>
+    <string name="spray_duration_sec">Püskürtme Süresi (sn): %d</string>
+
+    <string name="take_photo">Fotoğraf Çek</string>
+    <string name="upload_photo">Fotoğraf Yükle</string>
+    <string name="send_photo">Fotoğraf Gönder</string>
     <string name="user_taken_photo">Kullanıcının çektiği fotoğraf</string>
     <string name="no_photo_to_send">Gönderilecek fotoğraf yok</string>
-    <string name="error_uploading_image">Resim yükleme hatası: %s</string>
+    <string name="error_uploading_image">Fotoğraf yükleme hatası: %s</string>
     <string name="photo_sent_successfully">Fotoğraf başarıyla gönderildi</string>
-    <string name="send_failed">Gönderme başarısız</string>
+    <string name="send_failed">Gönderme başarısız oldu</string>
 
-    <string name="synced_successfully">Başarıyla senkronize edildi</string>
-    <string name="sync_failed_default">Senkronizasyon başarısız. Varsayılan/önceki ayarlar kullanılıyor.</string>
+    <string name="default_profile_name">Varsayılan</string>
+    <string name="add_profile">Profil Ekle</string>
+    <string name="edit_profile">Profili Düzenle</string>
+    <string name="delete_profile">Profili Sil</string>
+    <string name="create_new_profile">Yeni Profil Oluştur</string>
+    <string name="edit_profile_title">Profili Düzenle: %s</string>
+    <string name="profile_name">Profil Adı</string>
+    <string name="configure_emotion_settings_for_profile">Profil İçin Duygu Ayarlarını Yapılandır</string>
+    <string name="save_profile">Profili Kaydet</string>
+    <string name="profile_saved_successfully">Profil başarıyla kaydedildi.</string>
+    <string name="profile_deleted_successfully">Profil başarıyla silindi.</string>
+
+    <string name="synced_successfully">Başarıyla eşitlendi</string>
+    <string name="sync_failed_default">Eşitleme başarısız. Varsayılan/önceki ayarlar kullanılıyor.</string>
     <string name="device_settings_updated">Cihaz ayarları güncellendi</string>
-    <string name="device_update_failed">Cihaz güncelleme başarısız</string>
+    <string name="device_update_failed">Cihaz güncelleme başarısız oldu</string>
     <string name="device_off_action_disabled">Cihaz Kapalı. İşlem devre dışı.</string>
-
-    <string name="collapse_navigation">Navigasyonu Daralt</string>
-    <string name="expand_navigation">Navigasyonu Genişlet</string>
 
     <string name="send_data">Veri Gönder</string>
     <string name="status_waiting">Durum: Bağlantı bekleniyor...</string>
@@ -62,7 +82,6 @@
     <string name="not_connected_error">Herhangi bir cihaza bağlı değil.</string>
     <string name="refresh">Yenile</string>
     <string name="current_situation_label">Mevcut Durum: %s</string>
-    <string name="device_on_off_label">Cihaz Açık/Kapalı:</string>
     <string name="loading_device_status">Cihaz durumu yükleniyor...</string>
     <string name="error_prefix">Hata: %s</string>
     <string name="retry">Tekrar Dene</string>

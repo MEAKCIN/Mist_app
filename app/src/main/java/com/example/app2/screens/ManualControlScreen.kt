@@ -1,5 +1,10 @@
 package com.example.app2.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -11,7 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.app2.R
-import com.example.app2.data.EmotionSetting
+import com.example.app2.data.EmotionSetting //
 import kotlin.math.roundToInt
 
 @Composable
@@ -94,38 +99,48 @@ fun EmotionControlCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Conditionally display Spray Period and Duration based on isActive state
+            // and also if the main device is enabled.
+            AnimatedVisibility(
+                visible = emotionSetting.isActive && isEnabled,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = stringResource(R.string.spray_period_min, emotionSetting.sprayPeriod.roundToInt()))
-            MySlider(
-                value = emotionSetting.sprayPeriod,
-                onValueChange = { period ->
-                    onSettingChange(emotionSetting.copy(sprayPeriod = period))
-                },
-                valueRange = 1f..30f,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isEnabled && emotionSetting.isActive
-            )
+                    Text(text = stringResource(R.string.spray_period_min, emotionSetting.sprayPeriod.roundToInt()))
+                    MySlider(
+                        value = emotionSetting.sprayPeriod,
+                        onValueChange = { period ->
+                            onSettingChange(emotionSetting.copy(sprayPeriod = period))
+                        },
+                        valueRange = 1f..30f,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isEnabled && emotionSetting.isActive // Slider itself is also enabled/disabled
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = stringResource(R.string.spray_duration_sec, emotionSetting.sprayDuration.roundToInt()))
-            MySlider(
-                value = emotionSetting.sprayDuration,
-                onValueChange = { duration ->
-                    onSettingChange(emotionSetting.copy(sprayDuration = duration))
-                },
-                valueRange = 1f..59f,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isEnabled && emotionSetting.isActive
-            )
+                    Text(text = stringResource(R.string.spray_duration_sec, emotionSetting.sprayDuration.roundToInt()))
+                    MySlider(
+                        value = emotionSetting.sprayDuration,
+                        onValueChange = { duration ->
+                            onSettingChange(emotionSetting.copy(sprayDuration = duration))
+                        },
+                        valueRange = 1f..59f,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isEnabled && emotionSetting.isActive // Slider itself is also enabled/disabled
+                    )
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MySlider( // This composable itself doesn't have user-facing text
+fun MySlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
