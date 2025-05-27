@@ -89,4 +89,6 @@
     <string name="custom_profile_name">Özel</string>
     <string name="manual_settings_applied">Manuel ayarlar cihaza uygulandı</string>
     <string name="apply_manual_settings_to_device">Bu Ayarları Cihaza Uygula</string>
+    <string name="synced_settings_applied_as_custom">Senkronize edilen ayarlar farklı ve Özel olarak uygulandı.</string>
+    <string name="synced_settings_matched_profile">Senkronize edilen ayarlar profille eşleşti: %s</string>
 </resources>

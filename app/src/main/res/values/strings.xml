@@ -90,4 +90,6 @@
     <string name="custom_profile_name">Custom</string>
     <string name="manual_settings_applied">Manual settings applied to device</string>
     <string name="apply_manual_settings_to_device">Apply These Settings to Device</string>
+    <string name="synced_settings_applied_as_custom">Synced settings are different and applied as Custom.</string>
+    <string name="synced_settings_matched_profile">Synced settings matched profile: %s</string>
 </resources>
