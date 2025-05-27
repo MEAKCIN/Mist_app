@@ -3,9 +3,13 @@ package com.example.app2.ui
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder // Required for API 28+
+import android.net.Uri // Required for Uri
+import android.os.Build // Required for Build.VERSION.SDK_INT
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch // Required for launch without input
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -18,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-// Import a suitable icon for profile management, e.g., AccountCircle or SettingsSuggest
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -67,7 +70,6 @@ import java.util.UUID
 private val gson = Gson()
 private const val PROFILES_KEY = "user_profiles"
 private const val ACTIVE_PROFILE_ID_KEY = "active_profile_id"
-// const val CUSTOM_PROFILE_ID_PLACEHOLDER = "custom_profile_id_placeholder" // No longer strictly needed for this logic if isCustomSettingsActive is primary
 
 fun defaultDeviceEmotionSettings(): List<EmotionSetting> {
     return listOf(
@@ -101,7 +103,6 @@ fun MainScreen(
                 val type = object : TypeToken<MutableList<Profile>>() {}.type
                 gson.fromJson(json, type) ?: mutableListOf()
             } catch (e: Exception) {
-                // Log error or handle corrupt data
                 mutableListOf()
             }
         } else {
@@ -135,7 +136,6 @@ fun MainScreen(
         }
     }
 
-
     fun getActiveProfile(): Profile? {
         if (isCustomSettingsActive) return null
         return userProfiles.find { it.id == activeProfileId }
@@ -145,6 +145,10 @@ fun MainScreen(
         mutableStateOf(getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings())
     }
     var deviceOn by remember { mutableStateOf(true) }
+
+    // State for the photo in ImageControlScreen
+    var photoBitmapForImageScreen by remember { mutableStateOf<Bitmap?>(null) }
+
 
     LaunchedEffect(activeProfileId, userProfiles, isCustomSettingsActive) {
         if (!isCustomSettingsActive) {
@@ -161,7 +165,6 @@ fun MainScreen(
     var showEditProfileScreenFor by remember { mutableStateOf<Profile?>(null) }
     var isEditingNewProfile by remember { mutableStateOf(false) }
 
-
     val syncedSuccessfullyMessage = stringResource(R.string.synced_successfully)
     val syncFailedDefaultMessage = stringResource(R.string.sync_failed_default)
     val deviceSettingsUpdatedMessage = stringResource(R.string.device_settings_updated)
@@ -175,8 +178,9 @@ fun MainScreen(
     val profileDeletedMessage = stringResource(R.string.profile_deleted_successfully)
     val manualSettingsAppliedMessage = stringResource(R.string.manual_settings_applied)
     val noProfilesToUpdateDeviceMessage = stringResource(R.string.no_profiles_to_update_device)
-    val syncedSettingsAppliedAsCustomMessage = stringResource(R.string.synced_settings_applied_as_custom) // Add to strings.xml
-    val syncedSettingsMatchedProfileMessage = stringResource(R.string.synced_settings_matched_profile) // Add to strings.xml
+    val syncedSettingsAppliedAsCustomMessage = stringResource(R.string.synced_settings_applied_as_custom)
+    val syncedSettingsMatchedProfileMessage = stringResource(R.string.synced_settings_matched_profile)
+    val errorSelectingImageMessage = stringResource(R.string.error_selecting_image)
 
 
     fun syncDevice() {
@@ -184,38 +188,24 @@ fun MainScreen(
             NetworkManager.getDeviceStatus { success, response, syncedStatus ->
                 scope.launch {
                     if (success && syncedStatus != null) {
-                        deviceOn = syncedStatus.deviceOn // Update device on/off status
+                        deviceOn = syncedStatus.deviceOn
 
                         val syncedEmotions = syncedStatus.emotions
                         val matchingProfile = userProfiles.find { profile ->
-                            // Robust comparison: consider size, content, and order.
-                            // Data class equals() should handle content comparison if order is same.
-                            // If order doesn't matter, a more complex check (e.g., sets) is needed.
-                            // For now, assume order and content must match exactly.
-                            profile.emotionSettings.size == syncedEmotions.size &&
-                                    profile.emotionSettings.containsAll(syncedEmotions) &&
-                                    syncedEmotions.containsAll(profile.emotionSettings) // Order might still be an issue if not guaranteed
-                            // A safer check if order can differ but content must be same:
-                            // profile.emotionSettings.toSet() == syncedEmotions.toSet()
+                            profile.emotionSettings.toSet() == syncedEmotions.toSet()
                         }
 
                         if (matchingProfile != null) {
-                            // Synced settings match an existing profile
                             activeProfileId = matchingProfile.id
                             sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
-                            currentDeviceEmotionSettings = matchingProfile.emotionSettings // Already updated by LaunchedEffect
                             isCustomSettingsActive = false
+                            // currentDeviceEmotionSettings updated by LaunchedEffect
                             snackbarHostState.showSnackbar(syncedSettingsMatchedProfileMessage.format(matchingProfile.name))
                         } else {
-                            // Synced settings do not match any profile, apply as custom
                             currentDeviceEmotionSettings = syncedEmotions
                             isCustomSettingsActive = true
-                            // activeProfileId remains the same (or could be set to null/placeholder if desired)
-                            // but isCustomSettingsActive = true takes precedence for display and behavior.
                             snackbarHostState.showSnackbar(syncedSettingsAppliedAsCustomMessage)
                         }
-                        // Show general success message or more specific ones above
-                        // snackbarHostState.showSnackbar(syncedSuccessfullyMessage)
                     } else {
                         snackbarHostState.showSnackbar(response ?: syncFailedDefaultMessage)
                     }
@@ -225,43 +215,33 @@ fun MainScreen(
     }
 
     fun updateDeviceSettingsWithProfile() {
-        val profileToUse = getActiveProfile() // This will be null if isCustomSettingsActive is true
-        if (profileToUse == null) { // Check if we are in custom mode or no profile is active
+        val profileToUse = getActiveProfile()
+        if (profileToUse == null) {
             if(isCustomSettingsActive) {
-                // This function is for applying a SAVED profile.
-                // If custom is active, the "Update Device" on home screen should ideally
-                // apply the last selected *saved* profile, not the custom one.
-                // Or be disabled. For now, let's try to find last saved active.
                 val lastSavedActiveProfileId = sharedPreferences.getString(ACTIVE_PROFILE_ID_KEY, null)
                 val lastSavedProfile = userProfiles.find { it.id == lastSavedActiveProfileId }
                 if (lastSavedProfile != null) {
-                    // Temporarily switch to this profile's settings for the update
                     scope.launch(Dispatchers.IO) {
                         NetworkManager.updateDeviceRequest(
                             deviceOn,
-                            lastSavedProfile.emotionSettings // Use last saved profile's settings
+                            lastSavedProfile.emotionSettings
                         ) { success, response ->
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     response ?: if (success) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                                 )
-                                // Do NOT change isCustomSettingsActive here, user is still technically in custom mode
-                                // until they explicitly select a profile.
                             }
                         }
                     }
                 } else {
                     scope.launch { snackbarHostState.showSnackbar(noProfilesToUpdateDeviceMessage) }
                 }
-                return // Return after attempting to apply last saved profile
+                return
             } else {
-                // No profile active and not in custom mode
                 scope.launch { snackbarHostState.showSnackbar(noProfilesToUpdateDeviceMessage) }
                 return
             }
         }
-
-        // If not in custom mode and a profile is active, use its settings
         scope.launch(Dispatchers.IO) {
             NetworkManager.updateDeviceRequest(
                 deviceOn,
@@ -291,7 +271,6 @@ fun MainScreen(
         }
     }
 
-
     LaunchedEffect(Unit) {
         syncDevice()
     }
@@ -299,23 +278,53 @@ fun MainScreen(
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
+        photoBitmapForImageScreen = bitmap // Update the state with the taken photo
     }
 
     val uploadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri ->
+    ) { uri: Uri? ->
         uri?.let {
             try {
-                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                } else {
+                    val source = ImageDecoder.createSource(context.contentResolver, it)
+                    ImageDecoder.decodeBitmap(source)
+                }
+                photoBitmapForImageScreen = bitmap // Update the state with the uploaded photo
             } catch (e: Exception) {
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        errorUploadingImageMessage.format(e.localizedMessage)
+                        errorSelectingImageMessage.format(e.localizedMessage ?: "Unknown error")
                     )
                 }
             }
         }
     }
+
+    fun sendPhotoFromImageScreen() {
+        photoBitmapForImageScreen?.let { bitmap ->
+            scope.launch(Dispatchers.IO) {
+                NetworkManager.sendPhotoRequest(bitmap) { success, response ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            response ?: if (success) photoSentSuccessfullyMessage else sendFailedMessage
+                        )
+                        if (success) {
+                            photoBitmapForImageScreen = null // Clear photo after successful send
+                        }
+                    }
+                }
+            }
+        } ?: run {
+            scope.launch {
+                snackbarHostState.showSnackbar(noPhotoToSendMesssage)
+            }
+        }
+    }
+
 
     val screenHomeTitle = stringResource(R.string.home)
     val screenManualTitle = stringResource(R.string.manual_control)
@@ -326,25 +335,19 @@ fun MainScreen(
     val collapseNavDesc = stringResource(R.string.collapse_navigation)
     val expandNavDesc = stringResource(R.string.expand_navigation)
 
-
     if (isEditingNewProfile || showEditProfileScreenFor != null) {
         val profileBeingEdited = if (isEditingNewProfile) null else showEditProfileScreenFor
         val initialSettingsForEdit = if (isEditingNewProfile && isCustomSettingsActive) {
-            // Start new profile with current custom settings if custom is active
             currentDeviceEmotionSettings
         } else {
-            profileBeingEdited?.emotionSettings ?: defaultDeviceEmotionSettings() // Or defaults for new
+            profileBeingEdited?.emotionSettings ?: defaultDeviceEmotionSettings()
         }
-        val profileNameToEdit = profileBeingEdited?.name ?: ""
-
 
         EditProfileScreen(
-            // Pass a copy of initial profile if editing, or null for new
-            // If new and custom was active, EditProfileScreen should be able to take initial settings
             initialProfile = if (isEditingNewProfile) {
                 Profile(id = UUID.randomUUID().toString(), name = "", emotionSettings = initialSettingsForEdit)
             } else {
-                showEditProfileScreenFor?.copy(emotionSettings = initialSettingsForEdit)
+                showEditProfileScreenFor?.copy(emotionSettings = initialSettingsForEdit) // Ensure a copy is passed
             },
             onSaveProfile = { profileToSave ->
                 val updatedProfiles = userProfiles.toMutableList()
@@ -396,16 +399,15 @@ fun MainScreen(
                                 }
                             },
                             onUpdateDevice = {
-                                updateDeviceSettingsWithProfile() // This now handles custom mode by applying last saved profile
+                                updateDeviceSettingsWithProfile()
                             },
                             onSyncDevice = { syncDevice() },
                             profiles = userProfiles,
-                            activeProfileId = activeProfileId, // Pass the actual activeProfileId
+                            activeProfileId = activeProfileId,
                             onProfileSelected = { profileId ->
                                 activeProfileId = profileId
                                 sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, profileId).apply()
                                 isCustomSettingsActive = false
-                                // currentDeviceEmotionSettings updated by LaunchedEffect
                                 updateDeviceSettingsWithProfile()
                             },
                             isCustomActive = isCustomSettingsActive,
@@ -428,8 +430,8 @@ fun MainScreen(
                         )
                     Screen.ProfileManagement -> ProfileManagementScreen(
                         profiles = userProfiles,
-                        onAddProfile = { /* Nav handled by setting isEditingNewProfile */ },
-                        onUpdateProfile = { /* Nav handled by setting showEditProfileScreenFor */ },
+                        onAddProfile = { isEditingNewProfile = true; showEditProfileScreenFor = null },
+                        onUpdateProfile = { profileToEdit -> showEditProfileScreenFor = profileToEdit; isEditingNewProfile = false },
                         onDeleteProfile = { profileToDelete ->
                             val wasDeletedProfileActive = activeProfileId == profileToDelete.id
                             userProfiles = userProfiles.filterNot { it.id == profileToDelete.id }.toMutableList()
@@ -443,32 +445,26 @@ fun MainScreen(
                                     updateDeviceSettingsWithProfile()
                                 } else {
                                     currentDeviceEmotionSettings = defaultDeviceEmotionSettings()
-                                    // Consider updating device with defaults if all profiles deleted
-                                    // applyManualSettingsToDevice() // or a specific "applyDefaultsToDevice"
                                 }
                             }
                             scope.launch { snackbarHostState.showSnackbar(profileDeletedMessage) }
                         },
                         onNavigateToEditProfile = { profile ->
-                            if (profile == null) { // New profile
+                            if (profile == null) {
                                 isEditingNewProfile = true
                                 showEditProfileScreenFor = null
-                                // EditProfileScreen will use currentDeviceEmotionSettings if custom, or defaults
-                            } else { // Editing existing profile
+                            } else {
                                 isEditingNewProfile = false
                                 showEditProfileScreenFor = profile
-                                // EditProfileScreen will use profile.emotionSettings
                             }
                         }
                     )
                     Screen.Image ->
                         ImageControlScreen(
-                            photoBitmap = null,
-                            onTakePhoto = { photoLauncher.launch(null) },
+                            photoBitmap = photoBitmapForImageScreen,
+                            onTakePhoto = { photoLauncher.launch() }, // Use launch() for TakePicturePreview
                             onUploadPhoto = { uploadLauncher.launch("image/*") },
-                            onSendPhoto = {
-                                scope.launch { snackbarHostState.showSnackbar(noPhotoToSendMesssage) }
-                            }
+                            onSendPhoto = { sendPhotoFromImageScreen() } // Call the new send function
                         )
                     Screen.Settings ->
                         SettingsScreen(
@@ -517,6 +513,13 @@ fun MainScreen(
                         NavigationRailItem(
                             selected = selectedTab.route == screen.route,
                             onClick = {
+                                if (selectedTab.route != Screen.Image.route && screen.route == Screen.Image.route) {
+                                    // Clear previous photo when navigating to Image screen if it wasn't already there
+                                    // photoBitmapForImageScreen = null // Optional: Clear photo when navigating to this screen
+                                } else if (selectedTab.route == Screen.Image.route && screen.route != Screen.Image.route) {
+                                    // Clear photo when navigating away from Image screen
+                                    photoBitmapForImageScreen = null
+                                }
                                 selectedTab = screen
                                 navExpanded = false
                             },
