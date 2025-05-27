@@ -14,29 +14,38 @@ import com.example.app2.data.EmotionSetting
 import com.example.app2.data.Profile
 import java.util.UUID
 
-fun getDefaultEmotionSettingsForProfile(): List<EmotionSetting> { // Örnek başlangıç ayarları
+// --- इं Ensure this function is exactly as below ---
+fun getDefaultEmotionSettingsForProfile(): List<EmotionSetting> {
     return listOf(
         EmotionSetting("Neutral", 1f, 1f, false),
         EmotionSetting("Happy", 10f, 5f, true),
-        EmotionSetting("Surprise", 5f, 2f, false),
+        EmotionSetting("Angry", 5f, 2f, false), // VERIFY: Changed "Surprise" to "Angry"
         EmotionSetting("Sad", 20f, 10f, false)
     )
 }
-
+// --- End of critical section ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
-    initialProfile: Profile?, // Null ise yeni profil, değilse düzenleme
+    initialProfile: Profile?,
     onSaveProfile: (Profile) -> Unit,
     onCancel: () -> Unit
 ) {
     var profileName by remember { mutableStateOf(initialProfile?.name ?: "") }
     var currentEmotionSettings by remember {
         mutableStateOf(
-            initialProfile?.emotionSettings?.map { it.copy() } ?: getDefaultEmotionSettingsForProfile()
+            initialProfile?.emotionSettings?.map { it.copy() } ?: getDefaultEmotionSettingsForProfile() // Uses the function above
         )
     }
+
+    val defaultProfileNameString = stringResource(id = R.string.default_profile_name)
+    val createNewProfileString = stringResource(R.string.create_new_profile)
+    // Use initialProfile.name directly in the title if editing, or fallback to createNewProfileString
+    val titleText = initialProfile?.name?.takeIf { it.isNotEmpty() }
+        ?.let { stringResource(R.string.edit_profile_title, it) }
+        ?: createNewProfileString
+
 
     Column(
         modifier = Modifier
@@ -44,7 +53,7 @@ fun EditProfileScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = if (initialProfile == null) stringResource(R.string.create_new_profile) else stringResource(R.string.edit_profile_title, profileName),
+            text = titleText,
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -66,14 +75,14 @@ fun EditProfileScreen(
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             itemsIndexed(currentEmotionSettings) { index, setting ->
-                EmotionControlCard( // Bu sizin ManualControlScreen'deki kartınızla aynı
+                EmotionControlCard(
                     emotionSetting = setting,
                     onSettingChange = { updatedSetting ->
                         val newList = currentEmotionSettings.toMutableList()
                         newList[index] = updatedSetting
                         currentEmotionSettings = newList
                     },
-                    isEnabled = true // Profil düzenlerken her zaman aktif
+                    isEnabled = true
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -90,12 +99,12 @@ fun EditProfileScreen(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = {
-                val profileToSave = initialProfile?.copy(
-                    name = profileName,
-                    emotionSettings = currentEmotionSettings
-                ) ?: Profile(
-                    id = UUID.randomUUID().toString(),
-                    name = profileName,
+                val profileIdToUse = initialProfile?.id ?: UUID.randomUUID().toString()
+                val finalProfileName = profileName.ifBlank { defaultProfileNameString }
+
+                val profileToSave = Profile(
+                    id = profileIdToUse,
+                    name = finalProfileName,
                     emotionSettings = currentEmotionSettings
                 )
                 onSaveProfile(profileToSave)
@@ -105,4 +114,3 @@ fun EditProfileScreen(
         }
     }
 }
-
