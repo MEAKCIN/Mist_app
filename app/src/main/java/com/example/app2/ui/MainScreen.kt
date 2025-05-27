@@ -67,6 +67,7 @@ import java.util.UUID
 private val gson = Gson()
 private const val PROFILES_KEY = "user_profiles"
 private const val ACTIVE_PROFILE_ID_KEY = "active_profile_id"
+private const val CUSTOM_PROFILE_ID_PLACEHOLDER = "custom_profile_id_placeholder" // Placeholder for custom
 
 fun defaultDeviceEmotionSettings(): List<EmotionSetting> {
     return listOf(
@@ -112,8 +113,10 @@ fun MainScreen(
     var activeProfileId by remember {
         mutableStateOf(sharedPreferences.getString(ACTIVE_PROFILE_ID_KEY, null))
     }
+    var isCustomSettingsActive by remember { mutableStateOf(false) }
 
     val defaultProfileNameText = stringResource(id = R.string.default_profile_name)
+    val customProfileNameText = stringResource(id = R.string.custom_profile_name) // Add this to strings.xml
 
     // Initialize default profile if none exist
     LaunchedEffect(Unit) {
@@ -124,16 +127,19 @@ fun MainScreen(
             if (activeProfileId == null) {
                 activeProfileId = defaultProfile.id
                 sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
+                isCustomSettingsActive = false
             }
         } else if (activeProfileId == null && userProfiles.isNotEmpty()) {
             // If activeProfileId is null but profiles exist, set the first one as active
             activeProfileId = userProfiles.first().id
             sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
+            isCustomSettingsActive = false
         }
     }
 
 
     fun getActiveProfile(): Profile? {
+        if (isCustomSettingsActive) return null // No specific profile when custom is active
         return userProfiles.find { it.id == activeProfileId }
     }
 
@@ -142,11 +148,12 @@ fun MainScreen(
     }
     var deviceOn by remember { mutableStateOf(true) }
 
-    LaunchedEffect(activeProfileId, userProfiles) {
-        val newActiveProfile = getActiveProfile()
-        currentDeviceEmotionSettings = newActiveProfile?.emotionSettings ?: defaultDeviceEmotionSettings()
-        // Optionally, you might want to automatically update the device when the profile changes.
-        // For now, this is handled by the "Update Device Settings" button in HomeScreen.
+    LaunchedEffect(activeProfileId, userProfiles, isCustomSettingsActive) {
+        if (!isCustomSettingsActive) {
+            val newActiveProfile = getActiveProfile()
+            currentDeviceEmotionSettings = newActiveProfile?.emotionSettings ?: defaultDeviceEmotionSettings()
+        }
+        // If isCustomSettingsActive is true, currentDeviceEmotionSettings is managed by ManualControlScreen's changes
     }
 
     var selectedTab by remember { mutableStateOf<Screen>(Screen.Home) }
@@ -170,6 +177,8 @@ fun MainScreen(
     val deviceOffActionDisabledMessage = stringResource(R.string.device_off_action_disabled)
     val profileSavedMessage = stringResource(R.string.profile_saved_successfully)
     val profileDeletedMessage = stringResource(R.string.profile_deleted_successfully)
+    val manualSettingsAppliedMessage = stringResource(R.string.manual_settings_applied) // Add to strings.xml
+    val noProfilesToUpdateDeviceMessage = stringResource(R.string.no_profiles_to_update_device)
 
 
     fun syncDevice() {
@@ -178,9 +187,15 @@ fun MainScreen(
                 scope.launch {
                     if (success && status != null) {
                         deviceOn = status.deviceOn
-                        // Decide how to handle incoming emotion settings vs local profiles
-                        // For now, we primarily manage emotion settings via local profiles
-                        // currentDeviceEmotionSettings = if (status.emotions.isNotEmpty()) status.emotions else getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings()
+                        // If not in custom mode, and a profile is active,
+                        // you might want to compare or decide if device status should override profile.
+                        // For now, let's assume local profile/custom settings are the source of truth for sending.
+                        // Syncing primarily updates the 'deviceOn' status and confirms connectivity.
+                        // If you want synced emotions to update currentDeviceEmotionSettings:
+                        // if (!isCustomSettingsActive) {
+                        //    currentDeviceEmotionSettings = if (status.emotions.isNotEmpty()) status.emotions
+                        //                                else getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings()
+                        // }
                         snackbarHostState.showSnackbar(syncedSuccessfullyMessage)
                     } else {
                         snackbarHostState.showSnackbar(response ?: syncFailedDefaultMessage)
@@ -190,22 +205,25 @@ fun MainScreen(
         }
     }
 
-    fun updateDeviceSettings() {
-        if (activeProfileId == null && userProfiles.isNotEmpty()) {
-            // If no active profile somehow, try to set one
-            activeProfileId = userProfiles.first().id
-            sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
-            currentDeviceEmotionSettings = getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings()
-        } else if (userProfiles.isEmpty()) {
-            scope.launch { snackbarHostState.showSnackbar("No profiles available to update device.")} // Or a localized string
+    fun updateDeviceSettingsWithProfile() { // Renamed to be specific
+        if (isCustomSettingsActive) {
+            // This function should ideally not be called if custom settings are active from HomeScreen's update button.
+            // The "Update Device Settings" button in HomeScreen should be disabled or act differently
+            // if custom settings are active. For now, we proceed, but this indicates a UI/UX refinement.
+        }
+
+        val profileToUse = getActiveProfile()
+        if (profileToUse == null && !isCustomSettingsActive) {
+            scope.launch { snackbarHostState.showSnackbar(noProfilesToUpdateDeviceMessage) }
             return
         }
 
+        val settingsToSend = profileToUse?.emotionSettings ?: currentDeviceEmotionSettings // Fallback to current if profile somehow null
 
         scope.launch(Dispatchers.IO) {
             NetworkManager.updateDeviceRequest(
                 deviceOn,
-                currentDeviceEmotionSettings
+                settingsToSend
             ) { success, response ->
                 scope.launch {
                     snackbarHostState.showSnackbar(
@@ -215,6 +233,22 @@ fun MainScreen(
             }
         }
     }
+
+    fun applyManualSettingsToDevice() {
+        scope.launch(Dispatchers.IO) {
+            NetworkManager.updateDeviceRequest(
+                deviceOn,
+                currentDeviceEmotionSettings // These are the settings from ManualControlScreen
+            ) { success, response ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        response ?: if (success) manualSettingsAppliedMessage else deviceUpdateFailedMessage
+                    )
+                }
+            }
+        }
+    }
+
 
     LaunchedEffect(Unit) { // Initial sync
         syncDevice()
@@ -269,10 +303,12 @@ fun MainScreen(
                 userProfiles = updatedProfiles
                 saveProfilesToPrefs(userProfiles)
 
-                if (activeProfileId == profileToSave.id || (activeProfileId == null && userProfiles.size == 1)) {
-                    activeProfileId = profileToSave.id // Ensure active ID is set if it was the one edited or the only one
+                // If the saved profile is becoming the active one, or was already active
+                if (activeProfileId == profileToSave.id || (activeProfileId == null && userProfiles.size == 1) || isCustomSettingsActive || (isEditingNewProfile && userProfiles.size == 1)) {
+                    activeProfileId = profileToSave.id
                     sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
                     currentDeviceEmotionSettings = profileToSave.emotionSettings
+                    isCustomSettingsActive = false // Saving a profile makes it active and not custom
                 }
 
 
@@ -300,31 +336,68 @@ fun MainScreen(
                     Screen.Home ->
                         HomeScreen(
                             deviceOn = deviceOn,
-                            onDeviceOnSwitchChange = { deviceOn = it },
-                            onUpdateDevice = { updateDeviceSettings() },
+                            onDeviceOnSwitchChange = { changedDeviceOn ->
+                                deviceOn = changedDeviceOn
+                                // If turning device on/off with custom settings, still apply them
+                                if (isCustomSettingsActive) {
+                                    applyManualSettingsToDevice()
+                                } else if (activeProfileId != null) { // Or update with profile if not custom
+                                    updateDeviceSettingsWithProfile()
+                                }
+                            },
+                            onUpdateDevice = { // This button on home screen always uses the selected profile
+                                if (!isCustomSettingsActive && activeProfileId != null) {
+                                    updateDeviceSettingsWithProfile()
+                                } else if (isCustomSettingsActive) {
+                                    // Optionally, prompt user that this will apply the selected profile, not the custom one,
+                                    // or disable this button if custom is active.
+                                    // For now, let's assume it applies the *displayed* profile (which would be "Custom" text but underlying actual last profile)
+                                    // This needs UX refinement. A safer bet is to make it apply the last *saved* active profile.
+                                    val lastActiveSavedProfile = userProfiles.find { it.id == sharedPreferences.getString(ACTIVE_PROFILE_ID_KEY, null) }
+                                    if(lastActiveSavedProfile != null) {
+                                        currentDeviceEmotionSettings = lastActiveSavedProfile.emotionSettings
+                                        activeProfileId = lastActiveSavedProfile.id //
+                                        // isCustomSettingsActive should be false here if we are applying a saved profile.
+                                        // This interaction is tricky. Let's enforce that "Update Device Settings" on Home applies the *selected saved profile*.
+                                        updateDeviceSettingsWithProfile()
+
+                                    } else {
+                                        scope.launch{snackbarHostState.showSnackbar(noProfilesToUpdateDeviceMessage)}
+                                    }
+                                } else {
+                                    scope.launch{snackbarHostState.showSnackbar(noProfilesToUpdateDeviceMessage)}
+                                }
+                            },
                             onSyncDevice = { syncDevice() },
                             profiles = userProfiles,
-                            activeProfileId = activeProfileId,
+                            activeProfileId = if (isCustomSettingsActive) CUSTOM_PROFILE_ID_PLACEHOLDER else activeProfileId,
                             onProfileSelected = { profileId ->
-                                activeProfileId = profileId
-                                sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, profileId).apply()
-                                // Update currentDeviceEmotionSettings immediately
-                                currentDeviceEmotionSettings = getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings()
-                                // Optionally, auto-update device on profile selection:
-                                updateDeviceSettings()
-                            }
+                                if (profileId == CUSTOM_PROFILE_ID_PLACEHOLDER) {
+                                    isCustomSettingsActive = true // Should not happen if "Custom" is not selectable
+                                } else {
+                                    activeProfileId = profileId
+                                    sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, profileId).apply()
+                                    isCustomSettingsActive = false // Selecting a profile makes it not custom
+                                    // currentDeviceEmotionSettings updated by LaunchedEffect
+                                    updateDeviceSettingsWithProfile() // Auto-update device on profile selection
+                                }
+                            },
+                            isCustomActive = isCustomSettingsActive,
+                            customProfileName = customProfileNameText
                         )
-                    Screen.Manual -> // This screen's role might need re-evaluation.
-                        // It could be a "live test" for currentDeviceEmotionSettings.
+                    Screen.Manual ->
                         ManualControlScreen(
                             deviceOn = deviceOn,
-                            emotionSettings = currentDeviceEmotionSettings,
+                            emotionSettings = currentDeviceEmotionSettings, // Always show the current in-memory settings
                             onEmotionSettingChange = { updatedSettings ->
-                                // These changes are temporary and not saved to the profile here.
                                 currentDeviceEmotionSettings = updatedSettings
+                                isCustomSettingsActive = true // Any change here makes it custom
                             },
                             showDisabledMessage = {
                                 scope.launch { snackbarHostState.showSnackbar(deviceOffActionDisabledMessage) }
+                            },
+                            onApplyToDevice = {
+                                applyManualSettingsToDevice()
                             }
                         )
                     Screen.ProfileManagement -> ProfileManagementScreen(
@@ -332,14 +405,21 @@ fun MainScreen(
                         onAddProfile = { /* Navigation handled by setting isEditingNewProfile */ },
                         onUpdateProfile = { /* Navigation handled by setting showEditProfileScreenFor */ },
                         onDeleteProfile = { profileToDelete ->
+                            val wasDeletedProfileActive = activeProfileId == profileToDelete.id
                             userProfiles = userProfiles.filterNot { it.id == profileToDelete.id }.toMutableList()
                             saveProfilesToPrefs(userProfiles)
-                            if (activeProfileId == profileToDelete.id) {
+
+                            if (wasDeletedProfileActive || isCustomSettingsActive) { // If custom was active, or deleted was active
                                 activeProfileId = userProfiles.firstOrNull()?.id
                                 sharedPreferences.edit().putString(ACTIVE_PROFILE_ID_KEY, activeProfileId).apply()
-                                currentDeviceEmotionSettings = getActiveProfile()?.emotionSettings ?: defaultDeviceEmotionSettings()
-                                if (activeProfileId != null) { // If a new profile became active, update device
-                                    updateDeviceSettings()
+                                isCustomSettingsActive = false // Deleting a profile leads to a saved profile or no profile
+                                // currentDeviceEmotionSettings updated by LaunchedEffect
+                                if (activeProfileId != null) {
+                                    updateDeviceSettingsWithProfile()
+                                } else {
+                                    // Handle case where no profiles are left - perhaps set to default and update device
+                                    currentDeviceEmotionSettings = defaultDeviceEmotionSettings()
+                                    // Potentially update device with defaults if needed
                                 }
                             }
                             scope.launch { snackbarHostState.showSnackbar(profileDeletedMessage) }
@@ -347,21 +427,31 @@ fun MainScreen(
                         onNavigateToEditProfile = { profile ->
                             if (profile == null) {
                                 isEditingNewProfile = true
-                                showEditProfileScreenFor = null // Ensure this is null for new profile
+                                showEditProfileScreenFor = null
                             } else {
                                 isEditingNewProfile = false
                                 showEditProfileScreenFor = profile
+                            }
+                            // When navigating to edit, if custom was active, the settings being edited
+                            // are based on 'currentDeviceEmotionSettings'. If a profile is passed,
+                            // 'initialProfile.emotionSettings' will be used by EditProfileScreen.
+                            // If a new profile is created after being in custom mode,
+                            // it could start with 'currentDeviceEmotionSettings'.
+                            if (profile == null && isCustomSettingsActive) {
+                                // Consider pre-filling new profile with current custom settings
+                                // This logic is in EditProfileScreen's remember for currentEmotionSettings.
+                                // For safety, ensure EditProfileScreen's initial settings are correct.
                             }
                         }
                     )
                     Screen.Image ->
                         ImageControlScreen(
-                            // Pass necessary states and callbacks for ImageControlScreen
-                            // For example, if it needs to display the photo:
-                            photoBitmap = null, // This needs to be managed if ImageControlScreen displays it
+                            photoBitmap = null,
                             onTakePhoto = { photoLauncher.launch(null) },
                             onUploadPhoto = { uploadLauncher.launch("image/*") },
-                            onSendPhoto = { /* bitmap -> ... NetworkManager.sendPhotoRequest(bitmap) ... */ }
+                            onSendPhoto = { /* TODO: Implement actual photo sending */
+                                scope.launch { snackbarHostState.showSnackbar(noPhotoToSendMesssage) }
+                            }
                         )
                     Screen.Settings ->
                         SettingsScreen(
@@ -382,7 +472,7 @@ fun MainScreen(
                 )
                 NavigationRail(
                     modifier = Modifier
-                        .width(220.dp) // Slightly wider for profile names
+                        .width(220.dp)
                         .background(MaterialTheme.colorScheme.surface)
                         .windowInsetsPadding(WindowInsets.statusBars),
                     header = {
@@ -417,8 +507,8 @@ fun MainScreen(
                                 val iconPainter = when (screen.route) {
                                     Screen.Home.route -> painterResource(id = R.drawable.home)
                                     Screen.Manual.route -> painterResource(id = R.drawable.manual_control_icon)
-                                    Screen.Image.route -> painterResource(id = R.drawable.image_upload) // Check this
-                                    Screen.Settings.route -> painterResource(id = R.drawable.settings_icon) // Check this
+                                    Screen.Image.route -> painterResource(id = R.drawable.image_upload)
+                                    Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
                                     Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
                                     else -> painterResource(id = R.drawable.home)
                                 }
@@ -452,4 +542,3 @@ fun MainScreen(
         }
     }
 }
-

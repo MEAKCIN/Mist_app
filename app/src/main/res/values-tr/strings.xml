@@ -86,4 +86,7 @@
     <string name="error_prefix">Hata: %s</string>
     <string name="retry">Tekrar Dene</string>
     <string name="status_not_available">Cihaz durumu mevcut değil. Yenilemeyi deneyin.</string>
+    <string name="custom_profile_name">Özel</string>
+    <string name="manual_settings_applied">Manuel ayarlar cihaza uygulandı</string>
+    <string name="apply_manual_settings_to_device">Bu Ayarları Cihaza Uygula</string>
 </resources>

@@ -87,5 +87,7 @@
     <string name="error_prefix">Error: %s</string>
     <string name="retry">Retry</string>
     <string name="status_not_available">Device status not available. Try refreshing.</string>
-
+    <string name="custom_profile_name">Custom</string>
+    <string name="manual_settings_applied">Manual settings applied to device</string>
+    <string name="apply_manual_settings_to_device">Apply These Settings to Device</string>
 </resources>

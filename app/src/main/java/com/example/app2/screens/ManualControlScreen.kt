@@ -24,7 +24,8 @@ fun ManualControlScreen(
     deviceOn: Boolean,
     emotionSettings: List<EmotionSetting>,
     onEmotionSettingChange: (List<EmotionSetting>) -> Unit,
-    showDisabledMessage: () -> Unit
+    showDisabledMessage: () -> Unit,
+    onApplyToDevice: () -> Unit // New callback
 ) {
     Column(
         modifier = Modifier
@@ -53,6 +54,14 @@ fun ManualControlScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onApplyToDevice,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = deviceOn
+            ) {
+                Text(stringResource(R.string.apply_manual_settings_to_device)) // Add to strings.xml
+            }
         } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -61,6 +70,8 @@ fun ManualControlScreen(
             ) {
                 Text(stringResource(R.string.device_off_title))
                 Text(stringResource(R.string.device_off_subtitle))
+                // Consider if "Apply to device" button should be visible but disabled here,
+                // or completely hidden as it is now.
             }
         }
     }
@@ -86,7 +97,7 @@ fun EmotionControlCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = emotionSetting.name, // Emotion names might also need localization if they are not dynamic
+                    text = emotionSetting.name,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -99,8 +110,6 @@ fun EmotionControlCard(
                 )
             }
 
-            // Conditionally display Spray Period and Duration based on isActive state
-            // and also if the main device is enabled.
             AnimatedVisibility(
                 visible = emotionSetting.isActive && isEnabled,
                 enter = fadeIn() + slideInVertically(),
@@ -117,7 +126,7 @@ fun EmotionControlCard(
                         },
                         valueRange = 1f..30f,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = isEnabled && emotionSetting.isActive // Slider itself is also enabled/disabled
+                        enabled = isEnabled && emotionSetting.isActive
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -130,7 +139,7 @@ fun EmotionControlCard(
                         },
                         valueRange = 1f..59f,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = isEnabled && emotionSetting.isActive // Slider itself is also enabled/disabled
+                        enabled = isEnabled && emotionSetting.isActive
                     )
                 }
             }
