@@ -1,12 +1,15 @@
 package com.example.app2.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
@@ -47,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.app2.R
 import com.example.app2.data.Alarm
 import com.example.app2.data.EmotionSetting
@@ -93,6 +97,28 @@ fun MainScreen(
     onLanguageChange: (String) -> Unit
 ) {
     val context = LocalContext.current
+
+    // YENİ EKLENEN KISIM: Bildirim izni isteme mantığı
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            // İsteğe bağlı: Kullanıcı izni reddederse bir bilgilendirme gösterebilirsiniz.
+            Toast.makeText(context, "Notifications permission denied.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(key1 = true) {
+        // Sadece Android 13 (TIRAMISU) ve üzeri için izin iste
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+    // YENİ EKLENEN KISIM BİTİŞİ
+
+
     val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
 
     fun saveProfilesToPrefs(profiles: List<Profile>) {
@@ -119,17 +145,17 @@ fun MainScreen(
         sharedPreferences.edit().putString(ALARMS_KEY, json).apply()
     }
 
-    fun loadAlarmsFromPrefs(): MutableList<Alarm> {
+    fun loadAlarmsFromPrefs(): List<Alarm> {
         val json = sharedPreferences.getString(ALARMS_KEY, null)
         return if (json != null) {
             try {
-                val type = object : TypeToken<MutableList<Alarm>>() {}.type
-                gson.fromJson(json, type) ?: mutableListOf()
+                val type = object : TypeToken<List<Alarm>>() {}.type
+                gson.fromJson(json, type) ?: emptyList()
             } catch (e: Exception) {
-                mutableListOf()
+                emptyList()
             }
         } else {
-            mutableListOf()
+            emptyList()
         }
     }
 
@@ -562,8 +588,7 @@ fun MainScreen(
                         Screen.Manual.apply { title = screenManualTitle },
                         Screen.Image.apply { title = screenImageTitle },
                         Screen.Alarm.apply { title = screenAlarmTitle },
-                        Screen.Settings.apply { title = screenSettingsTitle },
-
+                        Screen.Settings.apply { title = screenSettingsTitle }
                     )
 
                     screens.forEach { screen ->
@@ -582,8 +607,8 @@ fun MainScreen(
                                     Screen.Manual.route -> painterResource(id = R.drawable.manual_control_icon)
                                     Screen.Image.route -> painterResource(id = R.drawable.image_upload)
                                     Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
-                                    Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
                                     Screen.Alarm.route -> painterResource(id = R.drawable.alarm)
+                                    Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
                                     else -> painterResource(id = R.drawable.home)
                                 }
                                 Icon(
