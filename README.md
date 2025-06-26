@@ -24,3 +24,15 @@ Kişiselleştirme:
 
 Açık ve koyu tema desteği.
 Çoklu dil desteği (İngilizce ve Türkçe).
+
+
+🚀 Kurulum ve Çalıştırma
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
+
+Projeyi Klonlayın:
+Bash
+
+git clone https://github.com/kullanici-adiniz/mist_app.git
+Android Studio'da Açın: Projeyi Android Studio (tercihen en güncel sürüm) ile açın.
+Bağımlılıkları Yükleyin: Gradle, gerekli tüm kütüphaneleri ve bağımlılıkları otomatik olarak indirecektir.
+Çalıştırın: Bir emülatör veya fiziksel bir Android cihaz seçerek uygulamayı çalıştırın.
