@@ -4,10 +4,12 @@ import android.graphics.Bitmap
 import android.util.Base64
 import android.util.Log
 import com.example.app2.data.DeviceStatus
+import com.example.app2.data.EmotionSetting // Import the new data class
 import kotlinx.coroutines.Dispatchers
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -15,24 +17,30 @@ import java.io.IOException
 class NetworkManager {
     companion object {
         fun updateDeviceRequest(
-            sprayPeriod: Float,
-            sprayDuration: Float,
             deviceOn: Boolean,
-            currentEmotion: String,
+            emotionSettings: List<EmotionSetting>, // Updated parameter
             onResponse: (Boolean, String?) -> Unit
         ) {
-            val json = """
-                {
-                    "sprayPeriod": $sprayPeriod,
-                    "sprayDuration": $sprayDuration,
-                    "deviceOn": $deviceOn,
-                    "currentEmotion": "$currentEmotion"
+            val emotionsJsonArray = JSONArray()
+            emotionSettings.forEach { setting ->
+                val emotionJson = JSONObject().apply {
+                    put("name", setting.name)
+                    put("sprayPeriod", setting.sprayPeriod)
+                    put("sprayDuration", setting.sprayDuration)
+                    put("isActive", setting.isActive)
                 }
-            """.trimIndent()
+                emotionsJsonArray.put(emotionJson)
+            }
+
+            val jsonPayload = JSONObject().apply {
+                put("deviceOn", deviceOn)
+                put("emotions", emotionsJsonArray)
+            }.toString()
+
             val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = json.toRequestBody(mediaType)
+            val requestBody = jsonPayload.toRequestBody(mediaType)
             val request = Request.Builder()
-                .url("http://10.0.2.2:5000/upload-manual")
+                .url("http://10.0.2.2:5000/upload-manual") // Ensure your backend expects this new structure
                 .post(requestBody)
                 .build()
             val client = OkHttpClient()
@@ -81,7 +89,7 @@ class NetworkManager {
             onResponse: (Boolean, String?, DeviceStatus?) -> Unit
         ) {
             val request = Request.Builder()
-                .url("http://10.0.2.2:5000/device")
+                .url("http://10.0.2.2:5000/device") // Ensure your backend returns the new structure
                 .build()
             val client = OkHttpClient()
             client.newCall(request).enqueue(object : Callback {
@@ -93,15 +101,28 @@ class NetworkManager {
                     response.body?.string()?.let { bodyString ->
                         try {
                             val jsonObject = JSONObject(bodyString)
+                            val deviceOn = jsonObject.getBoolean("deviceOn")
+                            val emotionsJsonArray = jsonObject.getJSONArray("emotions")
+                            val emotionSettingsList = mutableListOf<EmotionSetting>()
+                            for (i in 0 until emotionsJsonArray.length()) {
+                                val emotionJson = emotionsJsonArray.getJSONObject(i)
+                                emotionSettingsList.add(
+                                    EmotionSetting(
+                                        name = emotionJson.getString("name"),
+                                        sprayPeriod = emotionJson.getDouble("sprayPeriod").toFloat(),
+                                        sprayDuration = emotionJson.getDouble("sprayDuration").toFloat(),
+                                        isActive = emotionJson.getBoolean("isActive")
+                                    )
+                                )
+                            }
                             val status = DeviceStatus(
-                                sprayPeriod = jsonObject.getDouble("sprayPeriod").toFloat(),
-                                sprayDuration = jsonObject.getDouble("sprayDuration").toFloat(),
-                                deviceOn = jsonObject.getBoolean("deviceOn"),
-                                currentEmotion = jsonObject.getString("currentEmotion")
+                                emotions = emotionSettingsList,
+                                deviceOn = deviceOn
                             )
                             onResponse(true, null, status)
                         } catch (e: Exception) {
-                            onResponse(false, e.message, null)
+                            Log.e("NetworkManager", "Error parsing device status: ${e.message}")
+                            onResponse(false, "Error parsing device status: ${e.message}", null)
                         }
                     } ?: onResponse(false, "Empty response", null)
                 }
