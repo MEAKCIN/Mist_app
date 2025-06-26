@@ -255,6 +255,10 @@ fun MainScreen(
                                 snackbarHostState.showSnackbar(
                                     responseNwk ?: if (successNwk) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                                 )
+                                // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                                if(successNwk) {
+                                    syncDevice()
+                                }
                             }
                         }
                     }
@@ -276,6 +280,10 @@ fun MainScreen(
                     snackbarHostState.showSnackbar(
                         responseNwk ?: if (successNwk) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                     )
+                    // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                    if(successNwk) {
+                        syncDevice()
+                    }
                 }
             }
         }
@@ -291,6 +299,10 @@ fun MainScreen(
                     snackbarHostState.showSnackbar(
                         responseNwk ?: if (successNwk) manualSettingsAppliedMessage else deviceUpdateFailedMessage
                     )
+                    // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                    if(successNwk) {
+                        syncDevice()
+                    }
                 }
             }
         }
