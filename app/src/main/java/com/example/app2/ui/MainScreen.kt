@@ -1,12 +1,15 @@
 package com.example.app2.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
@@ -22,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,10 +50,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.app2.R
+import com.example.app2.data.Alarm
 import com.example.app2.data.EmotionSetting
 import com.example.app2.data.Profile
 import com.example.app2.network.NetworkManager
+import com.example.app2.screens.AlarmScreen
 import com.example.app2.screens.EditProfileScreen
 import com.example.app2.screens.HomeScreen
 import com.example.app2.screens.ImageControlScreen
@@ -70,6 +75,7 @@ import java.util.UUID
 private val gson = Gson()
 private const val PROFILES_KEY = "user_profiles"
 private const val ACTIVE_PROFILE_ID_KEY = "active_profile_id"
+private const val ALARMS_KEY = "user_alarms"
 
 // --- इं Ensure this function is exactly as below ---
 fun defaultDeviceEmotionSettings(): List<EmotionSetting> {
@@ -91,6 +97,28 @@ fun MainScreen(
     onLanguageChange: (String) -> Unit
 ) {
     val context = LocalContext.current
+
+    // YENİ EKLENEN KISIM: Bildirim izni isteme mantığı
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            // İsteğe bağlı: Kullanıcı izni reddederse bir bilgilendirme gösterebilirsiniz.
+            Toast.makeText(context, "Notifications permission denied.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(key1 = true) {
+        // Sadece Android 13 (TIRAMISU) ve üzeri için izin iste
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+    // YENİ EKLENEN KISIM BİTİŞİ
+
+
     val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
 
     fun saveProfilesToPrefs(profiles: List<Profile>) {
@@ -112,6 +140,26 @@ fun MainScreen(
         }
     }
 
+    fun saveAlarmsToPrefs(alarms: List<Alarm>) {
+        val json = gson.toJson(alarms)
+        sharedPreferences.edit().putString(ALARMS_KEY, json).apply()
+    }
+
+    fun loadAlarmsFromPrefs(): List<Alarm> {
+        val json = sharedPreferences.getString(ALARMS_KEY, null)
+        return if (json != null) {
+            try {
+                val type = object : TypeToken<List<Alarm>>() {}.type
+                gson.fromJson(json, type) ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+
+
     var userProfiles by remember { mutableStateOf(loadProfilesFromPrefs()) }
     var activeProfileId by remember {
         mutableStateOf(sharedPreferences.getString(ACTIVE_PROFILE_ID_KEY, null))
@@ -120,6 +168,9 @@ fun MainScreen(
 
     val defaultProfileNameText = stringResource(id = R.string.default_profile_name)
     val customProfileNameText = stringResource(id = R.string.custom_profile_name)
+
+    var alarms by remember { mutableStateOf<List<Alarm>>(loadAlarmsFromPrefs()) }
+
 
     LaunchedEffect(Unit) {
         if (userProfiles.isEmpty()) {
@@ -230,6 +281,10 @@ fun MainScreen(
                                 snackbarHostState.showSnackbar(
                                     responseNwk ?: if (successNwk) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                                 )
+                                // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                                if(successNwk) {
+                                    syncDevice()
+                                }
                             }
                         }
                     }
@@ -251,6 +306,10 @@ fun MainScreen(
                     snackbarHostState.showSnackbar(
                         responseNwk ?: if (successNwk) deviceSettingsUpdatedMessage else deviceUpdateFailedMessage
                     )
+                    // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                    if(successNwk) {
+                        syncDevice()
+                    }
                 }
             }
         }
@@ -266,6 +325,10 @@ fun MainScreen(
                     snackbarHostState.showSnackbar(
                         responseNwk ?: if (successNwk) manualSettingsAppliedMessage else deviceUpdateFailedMessage
                     )
+                    // EĞER BAŞARILIYSA, SENKRONİZE ET (YENİ EKLENEN KISIM)
+                    if(successNwk) {
+                        syncDevice()
+                    }
                 }
             }
         }
@@ -330,6 +393,8 @@ fun MainScreen(
     val screenImageTitle = stringResource(R.string.image_control)
     val screenSettingsTitle = stringResource(R.string.settings)
     val screenProfileManagementTitle = stringResource(R.string.profile_management)
+    val screenAlarmTitle = stringResource(R.string.alarm)
+
 
     val collapseNavDesc = stringResource(R.string.collapse_navigation)
     val expandNavDesc = stringResource(R.string.expand_navigation)
@@ -470,6 +535,25 @@ fun MainScreen(
                             currentLanguage = currentLanguage,
                             onLanguageChange = onLanguageChange
                         )
+                    Screen.Alarm ->
+                        AlarmScreen(
+                            alarms = alarms,
+                            profiles = userProfiles, // Pass the list of profiles
+                            onAddAlarm = { newAlarm ->
+                                alarms = alarms + newAlarm
+                                saveAlarmsToPrefs(alarms)
+                            },
+                            onUpdateAlarm = { alarmToUpdate ->
+                                alarms = alarms.map {
+                                    if (it.id == alarmToUpdate.id) alarmToUpdate else it
+                                }
+                                saveAlarmsToPrefs(alarms)
+                            },
+                            onDeleteAlarm = { alarmToDelete ->
+                                alarms = alarms.filterNot { it.id == alarmToDelete.id }
+                                saveAlarmsToPrefs(alarms)
+                            }
+                        )
                 }
             }
 
@@ -503,6 +587,7 @@ fun MainScreen(
                         Screen.ProfileManagement.apply { title = screenProfileManagementTitle },
                         Screen.Manual.apply { title = screenManualTitle },
                         Screen.Image.apply { title = screenImageTitle },
+                        Screen.Alarm.apply { title = screenAlarmTitle },
                         Screen.Settings.apply { title = screenSettingsTitle }
                     )
 
@@ -522,6 +607,7 @@ fun MainScreen(
                                     Screen.Manual.route -> painterResource(id = R.drawable.manual_control_icon)
                                     Screen.Image.route -> painterResource(id = R.drawable.image_upload)
                                     Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
+                                    Screen.Alarm.route -> painterResource(id = R.drawable.alarm)
                                     Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
                                     else -> painterResource(id = R.drawable.home)
                                 }
