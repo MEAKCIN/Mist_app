@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,9 +48,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.app2.R
+import com.example.app2.data.Alarm
 import com.example.app2.data.EmotionSetting
 import com.example.app2.data.Profile
 import com.example.app2.network.NetworkManager
+import com.example.app2.screens.AlarmScreen
 import com.example.app2.screens.EditProfileScreen
 import com.example.app2.screens.HomeScreen
 import com.example.app2.screens.ImageControlScreen
@@ -70,6 +71,7 @@ import java.util.UUID
 private val gson = Gson()
 private const val PROFILES_KEY = "user_profiles"
 private const val ACTIVE_PROFILE_ID_KEY = "active_profile_id"
+private const val ALARMS_KEY = "user_alarms"
 
 // --- इं Ensure this function is exactly as below ---
 fun defaultDeviceEmotionSettings(): List<EmotionSetting> {
@@ -112,6 +114,26 @@ fun MainScreen(
         }
     }
 
+    fun saveAlarmsToPrefs(alarms: List<Alarm>) {
+        val json = gson.toJson(alarms)
+        sharedPreferences.edit().putString(ALARMS_KEY, json).apply()
+    }
+
+    fun loadAlarmsFromPrefs(): MutableList<Alarm> {
+        val json = sharedPreferences.getString(ALARMS_KEY, null)
+        return if (json != null) {
+            try {
+                val type = object : TypeToken<MutableList<Alarm>>() {}.type
+                gson.fromJson(json, type) ?: mutableListOf()
+            } catch (e: Exception) {
+                mutableListOf()
+            }
+        } else {
+            mutableListOf()
+        }
+    }
+
+
     var userProfiles by remember { mutableStateOf(loadProfilesFromPrefs()) }
     var activeProfileId by remember {
         mutableStateOf(sharedPreferences.getString(ACTIVE_PROFILE_ID_KEY, null))
@@ -120,6 +142,9 @@ fun MainScreen(
 
     val defaultProfileNameText = stringResource(id = R.string.default_profile_name)
     val customProfileNameText = stringResource(id = R.string.custom_profile_name)
+
+    var alarms by remember { mutableStateOf<List<Alarm>>(loadAlarmsFromPrefs()) }
+
 
     LaunchedEffect(Unit) {
         if (userProfiles.isEmpty()) {
@@ -330,6 +355,8 @@ fun MainScreen(
     val screenImageTitle = stringResource(R.string.image_control)
     val screenSettingsTitle = stringResource(R.string.settings)
     val screenProfileManagementTitle = stringResource(R.string.profile_management)
+    val screenAlarmTitle = stringResource(R.string.alarm)
+
 
     val collapseNavDesc = stringResource(R.string.collapse_navigation)
     val expandNavDesc = stringResource(R.string.expand_navigation)
@@ -470,6 +497,25 @@ fun MainScreen(
                             currentLanguage = currentLanguage,
                             onLanguageChange = onLanguageChange
                         )
+                    Screen.Alarm ->
+                        AlarmScreen(
+                            alarms = alarms,
+                            profiles = userProfiles, // Pass the list of profiles
+                            onAddAlarm = { newAlarm ->
+                                alarms = alarms + newAlarm
+                                saveAlarmsToPrefs(alarms)
+                            },
+                            onUpdateAlarm = { alarmToUpdate ->
+                                alarms = alarms.map {
+                                    if (it.id == alarmToUpdate.id) alarmToUpdate else it
+                                }
+                                saveAlarmsToPrefs(alarms)
+                            },
+                            onDeleteAlarm = { alarmToDelete ->
+                                alarms = alarms.filterNot { it.id == alarmToDelete.id }
+                                saveAlarmsToPrefs(alarms)
+                            }
+                        )
                 }
             }
 
@@ -503,7 +549,9 @@ fun MainScreen(
                         Screen.ProfileManagement.apply { title = screenProfileManagementTitle },
                         Screen.Manual.apply { title = screenManualTitle },
                         Screen.Image.apply { title = screenImageTitle },
-                        Screen.Settings.apply { title = screenSettingsTitle }
+                        Screen.Alarm.apply { title = screenAlarmTitle },
+                        Screen.Settings.apply { title = screenSettingsTitle },
+
                     )
 
                     screens.forEach { screen ->
@@ -523,6 +571,7 @@ fun MainScreen(
                                     Screen.Image.route -> painterResource(id = R.drawable.image_upload)
                                     Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
                                     Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
+                                    Screen.Alarm.route -> painterResource(id = R.drawable.image_upload)
                                     else -> painterResource(id = R.drawable.home)
                                 }
                                 Icon(

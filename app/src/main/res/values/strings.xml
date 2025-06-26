@@ -92,4 +92,15 @@
     <string name="apply_manual_settings_to_device">Apply These Settings to Device</string>
     <string name="synced_settings_applied_as_custom">Synced settings are different and applied as Custom.</string>
     <string name="synced_settings_matched_profile">Synced settings matched profile: %s</string>
+    <string name="alarm">Alarm</string>
+    <string name="add_alarm">Add Alarm</string>
+    <string name="delete_alarm">Delete Alarm</string>
+    <string name="edit_alarm">Edit Alarm</string>
+    <string name="alarm_name">Alarm Name</string>
+    <string name="alarm_mode">Alarm Mode</string>
+    <string name="alarm_mode_single">Single Time (Device ON)</string>
+    <string name="alarm_mode_range">Time Range (Device ON, then OFF)</string>
+    <string name="start_time">Start Time</string>
+    <string name="end_time">End Time</string>
+    <string name="save">Save</string>
 </resources>
