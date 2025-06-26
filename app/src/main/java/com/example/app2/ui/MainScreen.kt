@@ -583,7 +583,7 @@ fun MainScreen(
                                     Screen.Image.route -> painterResource(id = R.drawable.image_upload)
                                     Screen.Settings.route -> painterResource(id = R.drawable.settings_icon)
                                     Screen.ProfileManagement.route -> painterResource(id = R.drawable.profile_management)
-                                    Screen.Alarm.route -> painterResource(id = R.drawable.image_upload)
+                                    Screen.Alarm.route -> painterResource(id = R.drawable.alarm)
                                     else -> painterResource(id = R.drawable.home)
                                 }
                                 Icon(
